@@ -336,9 +336,11 @@ function descartarCambios() {
 </template>
 
 <style scoped>
+
 .profile-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -353,11 +355,11 @@ function descartarCambios() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 7px;
   font-size: 14px;
 }
@@ -365,8 +367,10 @@ function descartarCambios() {
 .profile-card,
 .form-card,
 .info-card {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   overflow: hidden;
 }
 
@@ -387,7 +391,7 @@ function descartarCambios() {
 
 .profile-avatar {
   margin-top: -54px;
-  border: 5px solid white;
+  border: 5px solid rgb(var(--v-theme-surface));
   background: linear-gradient(135deg, #2563eb, #7c3aed);
   color: white;
   box-shadow: 0 8px 25px #2563eb30;
@@ -401,13 +405,13 @@ function descartarCambios() {
 .profile-content h2 {
   font-size: 23px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 18px;
 }
 
 .profile-email {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 7px;
   overflow-wrap: anywhere;
 }
@@ -429,12 +433,12 @@ function descartarCambios() {
 
 .profile-detail span {
   font-size: 12px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .profile-detail strong {
   font-size: 14px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   overflow-wrap: anywhere;
 }
 
@@ -452,28 +456,29 @@ function descartarCambios() {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: #eff6ff;
+  background: rgba(var(--v-theme-primary), 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .form-header h2 {
   font-size: 21px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .form-header p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 6px;
 }
 
 .form-card label {
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .form-actions {
@@ -493,12 +498,12 @@ function descartarCambios() {
 .info-card h3 {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .info-card p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
   margin-top: 7px;
 }
@@ -520,4 +525,5 @@ function descartarCambios() {
     width: 100%;
   }
 }
+
 </style>

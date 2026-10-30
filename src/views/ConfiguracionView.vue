@@ -1,8 +1,11 @@
 
 <script setup>
+
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanzasStore } from '@/stores/finanzas'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 const router = useRouter()
 const finanzas = useFinanzasStore()
@@ -18,7 +21,7 @@ const dinero = valor =>
   new Intl.NumberFormat('es-SV', {
     style: 'currency',
     currency: 'USD',
-  }).format(valor)
+  }).format(Number(valor) || 0)
 
 function actualizarPreferencia(campo, valor) {
   finanzas.actualizarConfiguracion({
@@ -40,41 +43,258 @@ function restablecerPreferencias() {
   notificar('Configuración restablecida correctamente')
 }
 
+// Convierte los nombres de campos en etiquetas legibles.
+function etiquetaCampo(campo) {
+  return String(campo)
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, letra => letra.toUpperCase())
+}
+
+// Convierte valores de cualquier tipo en texto para el PDF.
+function valorLegible(valor) {
+  if (valor === null || valor === undefined || valor === '') {
+    return 'No especificado'
+  }
+
+  if (typeof valor === 'boolean') {
+    return valor ? 'Sí' : 'No'
+  }
+
+  if (Array.isArray(valor)) {
+    return valor.length
+      ? valor.map(item => valorLegible(item)).join(', ')
+      : 'Sin registros'
+  }
+
+  if (typeof valor === 'object') {
+    return Object.entries(valor)
+      .map(([clave, dato]) =>
+        `${etiquetaCampo(clave)}: ${valorLegible(dato)}`
+      )
+      .join(' | ')
+  }
+
+  return String(valor)
+}
+
+// Agrega un título de sección al documento.
+function agregarTitulo(documento, titulo) {
+  const posicion = documento.lastAutoTable
+    ? documento.lastAutoTable.finalY + 14
+    : 55
+
+  documento.setFontSize(13)
+  documento.setTextColor(37, 99, 235)
+  documento.setFont('helvetica', 'bold')
+  documento.text(titulo, 14, posicion)
+
+  return posicion + 5
+}
+
+// Genera una tabla con los campos de un objeto.
+function agregarTablaObjeto(documento, objeto, inicio) {
+  const filas = objeto && typeof objeto === 'object'
+    ? Object.entries(objeto)
+        .filter(([clave]) =>
+          !['id', 'password', 'token'].includes(clave.toLowerCase())
+        )
+        .map(([clave, valor]) => [
+          etiquetaCampo(clave),
+          valorLegible(valor),
+        ])
+    : []
+
+  autoTable(documento, {
+    startY: inicio,
+    head: [['Dato', 'Información']],
+    body: filas.length
+      ? filas
+      : [['Información', 'No hay datos disponibles']],
+    theme: 'striped',
+    headStyles: { fillColor: [37, 99, 235] },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+      overflow: 'linebreak',
+    },
+    columnStyles: {
+      0: { cellWidth: 55 },
+    },
+  })
+}
+
+// Genera una tabla para presupuestos o metas.
+function agregarTablaColeccion(documento, coleccion, inicio) {
+  const filas = []
+
+  coleccion.forEach((registro, indice) => {
+    Object.entries(registro || {})
+      .filter(([clave]) => clave.toLowerCase() !== 'id')
+      .forEach(([clave, valor]) => {
+        filas.push([
+          String(indice + 1),
+          etiquetaCampo(clave),
+          valorLegible(valor),
+        ])
+      })
+  })
+
+  autoTable(documento, {
+    startY: inicio,
+    head: [['N.º', 'Campo', 'Información']],
+    body: filas.length
+      ? filas
+      : [['—', 'Sin registros', 'No hay información disponible']],
+    theme: 'striped',
+    headStyles: { fillColor: [37, 99, 235] },
+    styles: {
+      fontSize: 8,
+      cellPadding: 3,
+      overflow: 'linebreak',
+    },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 45 },
+    },
+  })
+}
+
 function exportarDatos() {
   try {
-    const respaldo = {
-      aplicacion: 'StudentWallet',
-      version: '1.0',
-      fechaExportacion: new Date().toISOString(),
-      perfil: finanzas.perfil,
-      movimientos: finanzas.movimientos,
-      presupuestos: finanzas.presupuestos,
-      metas: finanzas.metas,
-      configuracion: finanzas.configuracion,
-    }
+    const documento = new jsPDF()
+    const fecha = new Date().toLocaleDateString('es-SV')
 
-    const contenido = JSON.stringify(respaldo, null, 2)
-    const blob = new Blob([contenido], {
-      type: 'application/json',
+    const movimientos = finanzas.movimientos || []
+    const presupuestos = finanzas.presupuestos || []
+    const metas = finanzas.metas || []
+    const perfil = finanzas.perfil || {}
+
+    // ENCABEZADO
+    documento.setFontSize(22)
+    documento.setTextColor(37, 99, 235)
+    documento.setFont('helvetica', 'bold')
+    documento.text('StudentWallet', 14, 20)
+
+    documento.setFontSize(15)
+    documento.setTextColor(30, 41, 59)
+    documento.text('Informe financiero personal', 14, 30)
+
+    documento.setFontSize(9)
+    documento.setTextColor(100, 116, 139)
+    documento.setFont('helvetica', 'normal')
+    documento.text(`Fecha de generación: ${fecha}`, 14, 38)
+    documento.text('Documento de información personal', 14, 44)
+
+    // PERFIL
+    let inicio = agregarTitulo(
+      documento,
+      '1. Información del perfil'
+    )
+
+    agregarTablaObjeto(documento, perfil, inicio)
+
+    // RESUMEN FINANCIERO
+    inicio = agregarTitulo(
+      documento,
+      '2. Resumen financiero'
+    )
+
+    autoTable(documento, {
+      startY: inicio,
+      head: [['Indicador', 'Valor']],
+      body: [
+        ['Saldo actual', dinero(finanzas.saldo)],
+        ['Total de movimientos', String(movimientos.length)],
+        ['Total de presupuestos', String(presupuestos.length)],
+        ['Total de metas de ahorro', String(metas.length)],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: { fontSize: 9, cellPadding: 3 },
     })
 
-    const url = URL.createObjectURL(blob)
-    const enlace = document.createElement('a')
+    // MOVIMIENTOS
+    inicio = agregarTitulo(
+      documento,
+      '3. Desglose de movimientos'
+    )
 
-    enlace.href = url
-    enlace.download =
-      `studentwallet-respaldo-${new Date().toISOString().slice(0, 10)}.json`
+    const filasMovimientos = movimientos.map(item => [
+      item.date || 'Sin fecha',
+      item.name || 'Sin descripción',
+      item.category || 'Sin categoría',
+      item.type === 'income' ? 'Ingreso' : 'Gasto',
+      dinero(item.amount),
+    ])
 
-    document.body.appendChild(enlace)
-    enlace.click()
-    enlace.remove()
+    autoTable(documento, {
+      startY: inicio,
+      head: [[
+        'Fecha',
+        'Descripción',
+        'Categoría',
+        'Tipo',
+        'Monto',
+      ]],
+      body: filasMovimientos.length
+        ? filasMovimientos
+        : [['—', 'Sin movimientos', '—', '—', '—']],
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        overflow: 'linebreak',
+      },
+    })
 
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    // PRESUPUESTOS
+    inicio = agregarTitulo(
+      documento,
+      '4. Desglose de presupuestos'
+    )
 
-    notificar('Respaldo descargado correctamente')
+    agregarTablaColeccion(
+      documento,
+      presupuestos,
+      inicio
+    )
+
+    // METAS DE AHORRO
+    inicio = agregarTitulo(
+      documento,
+      '5. Metas de ahorro'
+    )
+
+    agregarTablaColeccion(
+      documento,
+      metas,
+      inicio
+    )
+
+    // PIE DE PÁGINA EN TODAS LAS HOJAS
+    const totalPaginas = documento.internal.getNumberOfPages()
+
+    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+      documento.setPage(pagina)
+      documento.setFontSize(8)
+      documento.setTextColor(120, 120, 120)
+
+      documento.text(
+        `StudentWallet - Informe personal | Página ${pagina} de ${totalPaginas}`,
+        14,
+        documento.internal.pageSize.height - 10
+      )
+    }
+
+    documento.save(
+      `studentwallet-informe-${new Date().toISOString().slice(0, 10)}.pdf`
+    )
+
+    notificar('Informe PDF generado correctamente')
   } catch (error) {
     console.error('Error al exportar:', error)
-    notificar('No se pudo exportar el respaldo', 'error')
+    notificar('No se pudo generar el informe PDF', 'error')
   }
 }
 
@@ -83,6 +303,7 @@ const resumen = computed(() => ({
   presupuestos: finanzas.presupuestos.length,
   metas: finanzas.metas.length,
 }))
+
 </script>
 
 <template>
@@ -253,8 +474,8 @@ const resumen = computed(() => ({
           <v-divider class="my-5" />
 
           <p class="section-description">
-            Descarga un archivo JSON con tu perfil, movimientos,
-            presupuestos, metas de ahorro y preferencias.
+            Genera y descarga un informe PDF con la información de tu perfil,
+            saldo actual, movimientos, presupuestos y metas de ahorro.
           </p>
 
           <v-alert
@@ -442,11 +663,15 @@ const resumen = computed(() => ({
 </template>
 
 <style scoped>
+
 .settings-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
+
+/* ENCABEZADO */
 
 .page-header,
 .card-heading,
@@ -467,18 +692,22 @@ const resumen = computed(() => ({
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   margin-top: 7px;
 }
 
+/* TARJETAS PRINCIPALES */
+
 .settings-card {
   padding: 28px;
-  border: 1px solid #e9edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 20px;
 }
 
@@ -501,30 +730,32 @@ const resumen = computed(() => ({
 }
 
 .blue-icon {
-  background: #eff6ff;
+  background: rgba(var(--v-theme-primary), 0.12);
 }
 
 .green-icon {
-  background: #ecfdf5;
+  background: rgba(var(--v-theme-success), 0.12);
 }
 
 .orange-icon {
-  background: #fffbeb;
+  background: rgba(var(--v-theme-warning), 0.12);
 }
 
 .card-heading h2 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .card-heading p,
 .section-description {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
   margin-top: 6px;
 }
+
+/* PREFERENCIAS */
 
 .setting-info {
   justify-content: flex-start;
@@ -535,24 +766,28 @@ const resumen = computed(() => ({
 .setting-icon {
   width: 43px;
   height: 43px;
-  background: #f8fafc;
+  background: rgba(var(--v-theme-on-surface), 0.05);
 }
 
 .setting-info h3 {
   font-size: 14px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .setting-info p {
   font-size: 12px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
   line-height: 1.5;
 }
 
+/* RESUMEN LATERAL */
+
 .overview-card {
-  border: 1px solid #e9edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 20px;
   overflow: hidden;
 }
@@ -568,12 +803,14 @@ const resumen = computed(() => ({
   font-size: 23px;
   font-weight: 800;
   margin-top: 10px;
+  color: white;
 }
 
 .overview-banner p {
   font-size: 12px;
   margin-top: 6px;
   opacity: 0.9;
+  color: white;
 }
 
 .overview-content {
@@ -583,14 +820,14 @@ const resumen = computed(() => ({
 .overview-content h3 {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-bottom: 22px;
 }
 
 .overview-item {
   margin-top: 18px;
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .overview-item span {
@@ -600,36 +837,40 @@ const resumen = computed(() => ({
 }
 
 .overview-item strong {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 16px;
 }
 
 .balance-label {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
 }
 
 .balance-value {
   font-size: 30px;
   font-weight: 800;
-  color: #2563eb;
+  color: rgb(var(--v-theme-primary));
   margin-top: 8px;
 }
+
+/* DIÁLOGO DE CONFIRMACIÓN */
 
 .confirm-dialog {
   padding: 30px;
   text-align: center;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .confirm-dialog h3 {
   font-size: 21px;
   font-weight: 800;
   margin-top: 15px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .confirm-dialog p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
   margin-top: 12px;
 }
@@ -638,6 +879,16 @@ const resumen = computed(() => ({
   justify-content: center;
   margin-top: 25px;
 }
+
+/* DIVISORES */
+
+.settings-card :deep(.v-divider),
+.overview-content :deep(.v-divider) {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
+  opacity: 1;
+}
+
+/* RESPONSIVE */
 
 @media (max-width: 600px) {
   .page-header h1 {
@@ -655,5 +906,22 @@ const resumen = computed(() => ({
   .setting-info {
     align-items: flex-start;
   }
+
+  .balance-value {
+    font-size: 26px;
+  }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .settings-card,
+  .overview-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .settings-card:hover,
+  .overview-card:hover {
+    border-color: rgba(var(--v-theme-primary), 0.3);
+  }
+}
+
 </style>

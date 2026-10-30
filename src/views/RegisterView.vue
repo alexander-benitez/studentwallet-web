@@ -502,470 +502,379 @@ async function register() {
 
 <style scoped>
 
+/* =========================================
+   ESTRUCTURA GENERAL
+========================================= */
+
 .register-page {
-
   min-height: 100vh;
-
-  background: #f8fafc;
-
+  background: rgb(var(--v-theme-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
-
 }
-
-
 
 .fill-height {
-
   min-height: 100vh;
-
 }
 
-
+/* =========================================
+   PANEL IZQUIERDO
+   Se conserva el diseño original
+========================================= */
 
 .brand-panel {
-
   position: relative;
-
   overflow: hidden;
-
-  background: linear-gradient(145deg, #1d4ed8, #4338ca 58%, #7c3aed);
-
+  background: linear-gradient(
+    145deg,
+    #1d4ed8,
+    #4338ca 58%,
+    #7c3aed
+  );
   color: white;
-
   display: flex;
-
   align-items: center;
-
   padding: 55px;
-
 }
-
-
 
 .brand-content {
-
   position: relative;
-
   z-index: 2;
-
   width: 100%;
-
   min-height: 75vh;
-
   display: flex;
-
   flex-direction: column;
-
   justify-content: space-between;
-
 }
-
-
 
 .logo {
-
   display: flex;
-
   align-items: center;
-
   gap: 12px;
-
+  color: white;
   font-size: 24px;
-
   font-weight: 800;
-
   letter-spacing: -0.8px;
-
 }
-
-
 
 .hero {
-
   max-width: 530px;
-
   animation: slideUp 0.8s ease both;
-
 }
-
-
 
 .hero h1 {
-
   font-size: clamp(36px, 4vw, 58px);
-
   line-height: 1.12;
-
   font-weight: 800;
-
   letter-spacing: -2px;
-
+  color: white;
 }
-
-
 
 .hero h1 span {
-
   display: block;
-
   color: #a7f3d0;
-
 }
-
-
 
 .hero p {
-
   font-size: 17px;
-
   line-height: 1.8;
-
   margin-top: 25px;
-
+  color: #ffffff;
   opacity: 0.88;
-
 }
-
-
 
 .benefits {
-
   margin-top: 35px;
-
   display: grid;
-
   gap: 16px;
-
 }
-
-
 
 .benefits div {
-
   display: flex;
-
   align-items: center;
-
   gap: 12px;
-
   font-size: 15px;
-
+  color: white;
 }
-
-
 
 .footer-brand {
-
   font-size: 13px;
-
+  color: white;
   opacity: 0.65;
-
 }
 
-
+/* =========================================
+   EFECTOS DECORATIVOS
+========================================= */
 
 .glow {
-
   position: absolute;
-
   border-radius: 50%;
-
   filter: blur(15px);
-
   pointer-events: none;
-
 }
-
-
 
 .glow-one {
-
   width: 350px;
-
   height: 350px;
-
   background: #60a5fa;
-
   opacity: 0.14;
-
   top: -130px;
-
   right: -120px;
-
 }
-
-
 
 .glow-two {
-
   width: 280px;
-
   height: 280px;
-
   background: #a78bfa;
-
   opacity: 0.2;
-
   bottom: -130px;
-
   left: -100px;
-
 }
 
-
+/* =========================================
+   PANEL DERECHO
+========================================= */
 
 .form-panel {
-
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
+  min-height: 100vh;
   padding: 35px 24px;
-
+  background: rgb(var(--v-theme-background));
 }
-
-
 
 .register-card {
-
   width: 100%;
-
   max-width: 440px;
-
   padding: 24px;
-
+  color: rgb(var(--v-theme-on-surface));
   background: transparent !important;
-
   animation: slideUp 0.7s ease both;
-
 }
 
-
+/* =========================================
+   ICONO Y ENCABEZADOS
+========================================= */
 
 .welcome-icon {
-
   width: 62px;
-
   height: 62px;
-
   border-radius: 18px;
-
-  background: #dbeafe;
-
+  background: rgba(var(--v-theme-primary), 0.14);
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
   margin-bottom: 20px;
-
 }
-
-
 
 .register-card h2 {
-
   font-size: 30px;
-
   font-weight: 800;
-
-  color: #0f172a;
-
+  color: rgb(var(--v-theme-on-surface));
   letter-spacing: -1px;
-
 }
-
-
 
 .subtitle {
-
-  color: #64748b;
-
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 8px;
-
   margin-bottom: 24px;
-
 }
 
-
+/* =========================================
+   ETIQUETAS Y CAMPOS
+========================================= */
 
 .register-card label {
-
+  display: block;
   font-size: 14px;
-
   font-weight: 600;
-
-  color: #334155;
-
+  color: rgb(var(--v-theme-on-surface));
 }
 
+/* Texto ingresado */
 
+.register-card :deep(.v-field__input input),
+.register-card :deep(.v-field__input textarea) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface)) !important;
+  opacity: 1 !important;
+  caret-color: rgb(var(--v-theme-primary)) !important;
+}
+
+/* Texto de ejemplo */
+
+.register-card :deep(.v-field__input input::placeholder),
+.register-card :deep(.v-field__input textarea::placeholder) {
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface-variant)) !important;
+  opacity: 0.8 !important;
+}
+
+/* Iconos de los campos */
+
+.register-card :deep(.v-field__prepend-inner .v-icon),
+.register-card :deep(.v-field__append-inner .v-icon) {
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+/* Bordes de los campos */
+
+.register-card :deep(.v-field--variant-outlined .v-field__outline) {
+  color: rgba(var(--v-theme-on-surface), 0.25);
+}
+
+.register-card :deep(.v-field--focused .v-field__outline) {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+/* Mensajes de validación */
+
+.register-card :deep(.v-messages) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* =========================================
+   SEGURIDAD DE CONTRASEÑA
+========================================= */
 
 .password-strength {
-
   margin: -4px 0 22px;
-
   font-size: 12px;
-
-  color: #64748b;
-
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
-
+/* =========================================
+   BOTÓN DE REGISTRO
+========================================= */
 
 .register-btn {
-
   font-weight: 700;
-
   text-transform: none;
-
   letter-spacing: 0;
-
   transition: transform 0.25s, box-shadow 0.25s;
-
 }
-
-
 
 .register-btn:hover {
-
   transform: translateY(-2px);
-
   box-shadow: 0 10px 25px #2563eb40;
-
 }
 
-
+/* =========================================
+   ENLACE PARA INICIAR SESIÓN
+========================================= */
 
 .login-link {
-
   text-align: center;
-
   margin-top: 25px;
-
-  color: #64748b;
-
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
-
 }
-
-
 
 .login-link a {
-
-  color: #2563eb;
-
+  color: rgb(var(--v-theme-primary));
   font-weight: 700;
-
   text-decoration: none;
-
 }
-
-
 
 .login-link a:hover {
-
   text-decoration: underline;
-
 }
 
-
+/* =========================================
+   MENSAJE DE SEGURIDAD
+========================================= */
 
 .security {
-
   display: flex;
-
   justify-content: center;
-
   align-items: center;
-
   gap: 8px;
-
-  color: #94a3b8;
-
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
-
   margin-top: 30px;
-
 }
 
+/* =========================================
+   AUTOCOMPLETADO
+========================================= */
 
+.register-card :deep(input:-webkit-autofill),
+.register-card :deep(input:-webkit-autofill:hover),
+.register-card :deep(input:-webkit-autofill:focus) {
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface)) !important;
+  caret-color: rgb(var(--v-theme-primary));
+}
+
+/* =========================================
+   ANIMACIONES
+========================================= */
 
 @keyframes slideUp {
-
   from {
-
     opacity: 0;
-
     transform: translateY(24px);
-
   }
-
-
 
   to {
-
     opacity: 1;
-
     transform: translateY(0);
-
   }
-
 }
 
-
+/* =========================================
+   RESPONSIVE
+========================================= */
 
 @media (max-width: 960px) {
-
   .brand-panel {
-
     padding: 35px;
-
   }
-
-
 
   .brand-content {
-
     min-height: auto;
-
     gap: 35px;
-
   }
-
-
 
   .hero h1 {
-
     font-size: 36px;
-
   }
-
-
 
   .footer-brand {
-
     display: none;
-
   }
 
+  .form-panel {
+    min-height: auto;
+  }
 }
 
+@media (max-width: 600px) {
+  .brand-panel {
+    padding: 25px;
+  }
 
+  .hero h1 {
+    font-size: 32px;
+  }
 
-@media (prefers-reduced-motion: reduce) {
+  .hero p {
+    font-size: 15px;
+  }
 
-  .hero,
+  .form-panel {
+    padding: 25px 16px;
+  }
 
   .register-card {
-
-    animation: none;
-
+    padding: 20px 10px;
   }
-
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .register-card {
+    animation: none;
+  }
+}
 </style>

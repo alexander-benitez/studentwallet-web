@@ -6,6 +6,7 @@ import { useFinanzasStore } from '@/stores/finanzas'
 
 const router = useRouter()
 const finanzas = useFinanzasStore()
+
 const categoriasIngresos = computed(() =>
   finanzas.categorias
     .filter(categoria => categoria.tipo === 'income')
@@ -14,6 +15,7 @@ const categoriasIngresos = computed(() =>
       value: categoria.nombre,
     }))
 )
+
 const form = ref(null)
 const concepto = ref('')
 const monto = ref(null)
@@ -27,15 +29,6 @@ const mensaje = ref('')
 const guardando = ref(false)
 const busqueda = ref('')
 
-const categorias = [
-  'Beca estudiantil',
-  'Salario',
-  'Trabajo freelance',
-  'Apoyo familiar',
-  'Ventas',
-  'Otros',
-]
-
 const ingresos = computed(() =>
   finanzas.movimientos
     .filter(m => m.type === 'income')
@@ -48,13 +41,15 @@ const ingresos = computed(() =>
 
 const totalIngresos = computed(() => finanzas.ingresos)
 
-const formatoDinero = (valor) =>
+const formatoDinero = valor =>
   new Intl.NumberFormat('es-SV', {
     style: 'currency',
     currency: 'USD',
   }).format(valor)
 
-const obligatorio = v => !!v || 'Este campo es obligatorio'
+const obligatorio = v =>
+  !!String(v ?? '').trim() || 'Este campo es obligatorio'
+
 const montoValido = v =>
   (Number.isFinite(Number(v)) && Number(v) > 0) ||
   'Ingresa un monto mayor a cero'
@@ -97,6 +92,8 @@ async function guardarIngreso() {
 
 <template>
   <v-container fluid class="income-page pa-4 pa-md-8">
+
+    <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
@@ -124,6 +121,7 @@ async function guardarIngreso() {
       </v-btn>
     </div>
 
+    <!-- RESUMEN FINANCIERO -->
     <v-row class="mt-5">
       <v-col cols="12" md="6">
         <v-card class="summary-card gradient-card" elevation="0">
@@ -161,6 +159,7 @@ async function guardarIngreso() {
       </v-col>
     </v-row>
 
+    <!-- HISTORIAL DE INGRESOS -->
     <v-card class="history-card mt-6" elevation="0">
       <div class="history-header">
         <div>
@@ -180,7 +179,7 @@ async function guardarIngreso() {
         />
       </div>
 
-      <v-table>
+      <v-table class="income-table">
         <thead>
           <tr>
             <th>Concepto</th>
@@ -197,6 +196,7 @@ async function guardarIngreso() {
                 <v-avatar color="success" variant="tonal" size="40">
                   <v-icon>mdi-arrow-down-left</v-icon>
                 </v-avatar>
+
                 <strong>{{ ingreso.name }}</strong>
               </div>
             </td>
@@ -220,6 +220,7 @@ async function guardarIngreso() {
                 <v-icon size="58" color="grey-lighten-1">
                   mdi-cash-remove
                 </v-icon>
+
                 <h3>No hay ingresos para mostrar</h3>
                 <p>Registra tu primer ingreso o cambia la búsqueda.</p>
 
@@ -256,7 +257,9 @@ async function guardarIngreso() {
 
         <v-card-text>
           <v-form ref="form" @submit.prevent="guardarIngreso">
+
             <label>Concepto</label>
+
             <v-text-field
               v-model="concepto"
               placeholder="Ej. Pago de trabajo"
@@ -268,6 +271,7 @@ async function guardarIngreso() {
             />
 
             <label>Monto (USD)</label>
+
             <v-text-field
               v-model="monto"
               type="number"
@@ -281,40 +285,49 @@ async function guardarIngreso() {
               class="mt-2 mb-2"
             />
 
-            <label>Categoría</label>
-            <v-select
-              v-model="categoria"
-              :items="categoriasIngresos"
-              placeholder="Selecciona una categoría"
-              prepend-inner-icon="mdi-shape-outline"
-              variant="outlined"
-              rounded="lg"
-              :rules="[obligatorio]"
-              class="mt-2 mb-2"
-            />
+            <!-- CATEGORÍA -->
+<div class="form-field">
+  <label>Categoría</label>
 
-            <v-btn
-  to="/categorias"
-  variant="text"
-  color="primary"
-  size="small"
-  prepend-icon="mdi-plus-circle-outline"
-  class="mb-4"
->
-  Administrar mis categorías
-</v-btn>
+  <v-select
+    v-model="categoria"
+    :items="categoriasIngresos"
+    placeholder="Selecciona una categoría"
+    prepend-inner-icon="mdi-shape-outline"
+    variant="outlined"
+    rounded="lg"
+    :rules="[obligatorio]"
+    class="mt-2"
+  />
 
-            <label>Fecha</label>
-            <v-text-field
-              v-model="fecha"
-              type="date"
-              variant="outlined"
-              rounded="lg"
-              :rules="[obligatorio]"
-              class="mt-2 mb-2"
-            />
+  <v-btn
+    to="/categorias"
+    variant="text"
+    color="primary"
+    size="small"
+    prepend-icon="mdi-plus-circle-outline"
+    class="category-button"
+  >
+    Administrar mis categorías
+  </v-btn>
+</div>
+
+<!-- FECHA -->
+<div class="form-field">
+  <label>Fecha</label>
+
+  <v-text-field
+    v-model="fecha"
+    type="date"
+    variant="outlined"
+    rounded="lg"
+    :rules="[obligatorio]"
+    class="mt-2"
+  />
+</div>
 
             <label>Descripción (opcional)</label>
+
             <v-textarea
               v-model="descripcion"
               placeholder="Agrega detalles sobre este ingreso..."
@@ -343,11 +356,13 @@ async function guardarIngreso() {
                 Guardar ingreso
               </v-btn>
             </div>
+
           </v-form>
         </v-card-text>
       </v-card>
     </v-dialog>
 
+    <!-- NOTIFICACIÓN -->
     <v-snackbar
       v-model="snackbar"
       color="success"
@@ -358,15 +373,21 @@ async function guardarIngreso() {
       <v-icon class="mr-2">mdi-check-circle</v-icon>
       {{ mensaje }}
     </v-snackbar>
+
   </v-container>
 </template>
 
 <style scoped>
+/* CONTENEDOR PRINCIPAL */
+
 .income-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
+
+/* ENCABEZADOS */
 
 .page-header,
 .history-header {
@@ -380,31 +401,35 @@ async function guardarIngreso() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p,
 .history-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 7px;
   font-size: 14px;
 }
+
+/* TARJETAS DE RESUMEN */
 
 .summary-card {
   min-height: 190px;
   padding: 27px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
 .summary-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px #0f172a12;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
 }
 
 .summary-card span {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   font-weight: 600;
 }
@@ -413,7 +438,7 @@ async function guardarIngreso() {
   font-size: 36px;
   font-weight: 800;
   margin-top: 22px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .summary-footer {
@@ -421,9 +446,11 @@ async function guardarIngreso() {
   align-items: center;
   gap: 8px;
   margin-top: 16px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
 }
+
+/* TARJETA CON GRADIENTE */
 
 .gradient-card {
   background: linear-gradient(135deg, #2563eb, #4338ca, #7c3aed);
@@ -434,13 +461,17 @@ async function guardarIngreso() {
 .gradient-card span,
 .gradient-card h2,
 .gradient-card .summary-footer {
-  color: white;
+  color: white !important;
 }
 
+/* HISTORIAL */
+
 .history-card {
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 20px;
   overflow: hidden;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .history-header {
@@ -450,11 +481,32 @@ async function guardarIngreso() {
 .history-header h3 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .search-input {
   max-width: 270px;
+}
+
+/* TABLA */
+
+.income-table {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.income-table :deep(th) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.income-table :deep(td) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.income-table :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-primary), 0.04);
 }
 
 .income-name {
@@ -464,9 +516,11 @@ async function guardarIngreso() {
 }
 
 .income-name strong {
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 13px;
 }
+
+/* ESTADO VACÍO */
 
 .empty-state {
   padding: 55px 20px;
@@ -476,16 +530,20 @@ async function guardarIngreso() {
 .empty-state h3 {
   margin-top: 15px;
   font-size: 18px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .empty-state p {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin: 10px 0 20px;
 }
 
+/* DIÁLOGO */
+
 .dialog-card {
   padding: 12px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-title {
@@ -493,6 +551,7 @@ async function guardarIngreso() {
   justify-content: space-between;
   align-items: center;
   padding: 20px 20px 10px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-title h3 {
@@ -502,15 +561,17 @@ async function guardarIngreso() {
 
 .dialog-title p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
 .dialog-card label {
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
+
+/* ACCIONES DEL FORMULARIO */
 
 .dialog-actions {
   display: flex;
@@ -518,6 +579,8 @@ async function guardarIngreso() {
   gap: 12px;
   margin-top: 15px;
 }
+
+/* RESPONSIVE */
 
 @media (max-width: 600px) {
   .page-header h1 {
@@ -530,6 +593,48 @@ async function guardarIngreso() {
 
   .search-input {
     max-width: 100%;
+    width: 100%;
   }
+
+  .history-header {
+    padding: 20px;
+  }
+
+  .dialog-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* ACCESIBILIDAD */
+
+@media (prefers-reduced-motion: reduce) {
+  .summary-card {
+    transition: none;
+  }
+
+  .summary-card:hover {
+    transform: none;
+  }
+  /* ORGANIZACIÓN DE CAMPOS DEL FORMULARIO */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+
+.form-field label {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.category-button {
+  align-self: flex-start;
+  margin-top: -8px;
+  margin-bottom: 18px;
+  padding-left: 0;
+}
 }
 </style>

@@ -379,12 +379,15 @@ function eliminar() {
 </template>
 
 <style scoped>
+
 .movements-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* ENCABEZADO */
 .page-header,
 .history-header {
   display: flex;
@@ -397,34 +400,37 @@ function eliminar() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p,
 .history-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 7px;
   font-size: 14px;
 }
 
+/* TARJETAS DE RESUMEN */
 .stat-card {
   min-height: 180px;
   padding: 27px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px #0f172a12;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
 }
 
 .stat-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   font-weight: 600;
 }
@@ -434,14 +440,16 @@ function eliminar() {
   font-weight: 800;
   margin-top: 22px;
   letter-spacing: -1px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .stat-card p {
   font-size: 12px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 12px;
 }
 
+/* TARJETA DE SALDO */
 .balance-card {
   background: linear-gradient(135deg, #2563eb, #4338ca, #7c3aed);
   border: none;
@@ -449,13 +457,17 @@ function eliminar() {
 }
 
 .balance-card .stat-heading,
+.balance-card h2,
 .balance-card p {
-  color: white;
+  color: white !important;
 }
 
+/* HISTORIAL */
 .history-card {
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   overflow: hidden;
 }
 
@@ -466,9 +478,10 @@ function eliminar() {
 .history-header h3 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
+/* FILTROS */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -486,6 +499,33 @@ function eliminar() {
   min-width: 170px;
 }
 
+/* TABLA */
+.movements-table {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.movements-table :deep(table) {
+  background: transparent;
+}
+
+.movements-table th {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: nowrap;
+}
+
+.movements-table td {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+.movements-table :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-primary), 0.06);
+}
+
 .movement-name {
   display: flex;
   align-items: center;
@@ -494,20 +534,10 @@ function eliminar() {
 
 .movement-name strong {
   font-size: 13px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
-.movements-table th {
-  font-size: 12px;
-  font-weight: 700;
-  color: #94a3b8;
-}
-
-.movements-table td {
-  padding-top: 12px !important;
-  padding-bottom: 12px !important;
-}
-
+/* ESTADO VACÍO */
 .empty-state {
   padding: 55px 20px;
   text-align: center;
@@ -515,24 +545,27 @@ function eliminar() {
 
 .empty-state h3 {
   margin-top: 15px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 18px;
 }
 
 .empty-state p {
   margin: 10px 0 20px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
+/* DIÁLOGO DE ELIMINACIÓN */
 .delete-dialog {
   padding: 30px;
   text-align: center;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-icon {
   width: 70px;
   height: 70px;
-  background: #fee2e2;
+  background: rgba(var(--v-theme-error), 0.15);
   border-radius: 20px;
   margin: 0 auto 20px;
   display: flex;
@@ -543,13 +576,17 @@ function eliminar() {
 .delete-dialog h3 {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog p {
   margin-top: 12px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
+}
+
+.delete-dialog p strong {
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-actions {
@@ -559,6 +596,7 @@ function eliminar() {
   margin-top: 25px;
 }
 
+/* RESPONSIVE */
 @media (max-width: 600px) {
   .page-header h1 {
     font-size: 25px;
@@ -578,9 +616,11 @@ function eliminar() {
   }
 }
 
+/* ACCESIBILIDAD */
 @media (prefers-reduced-motion: reduce) {
   .stat-card {
     transition: none;
   }
 }
+
 </style>

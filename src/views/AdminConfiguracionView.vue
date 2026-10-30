@@ -391,10 +391,12 @@ function restablecerConfiguracion() {
 </template>
 
 <style scoped>
+
 .config-page {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header {
@@ -408,17 +410,18 @@ function restablecerConfiguracion() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .config-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
 }
@@ -433,11 +436,11 @@ function restablecerConfiguracion() {
 .section-heading h2 {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-heading p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 5px;
 }
@@ -453,19 +456,19 @@ function restablecerConfiguracion() {
 }
 
 .blue {
-  background: #dbeafe;
+  background: rgba(var(--v-theme-primary), 0.14);
 }
 
 .purple {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.14);
 }
 
 .green {
-  background: #d1fae5;
+  background: rgba(var(--v-theme-success), 0.14);
 }
 
 .orange {
-  background: #fef3c7;
+  background: rgba(var(--v-theme-warning), 0.16);
 }
 
 .setting-row,
@@ -479,26 +482,54 @@ function restablecerConfiguracion() {
 
 .setting-row strong {
   font-size: 14px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .setting-row p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
   margin-top: 5px;
 }
 
 .module-row {
   font-size: 13px;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
+  color: rgb(var(--v-theme-on-surface));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.10);
 }
 
 .restore-description {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   line-height: 1.7;
   margin-bottom: 20px;
+}
+
+/* Divisores */
+.config-card :deep(.v-divider) {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
+}
+
+/* Campos del formulario */
+.config-card :deep(.v-field) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.config-card :deep(.v-label) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* Diálogo de confirmación */
+:deep(.v-dialog .v-card) {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+:deep(.v-dialog .v-card-title) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+:deep(.v-dialog .v-card-text) {
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .save-actions {
@@ -524,4 +555,5 @@ function restablecerConfiguracion() {
     width: 100%;
   }
 }
+
 </style>

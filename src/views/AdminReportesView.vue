@@ -3,7 +3,7 @@
 import { ref, computed } from 'vue'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const periodo = ref('Todos')
 const snackbar = ref(false)
@@ -64,46 +64,412 @@ function filasReporte() {
   }))
 }
 
-function exportarExcel() {
+
+async function exportarExcel() {
   try {
-    const filas = filasReporte()
+    const libro = new ExcelJS.Workbook()
 
-    const resumen = [
-      { Indicador: 'Período', Valor: periodo.value },
-      { Indicador: 'Ingresos', Valor: totalIngresos.value },
-      { Indicador: 'Gastos', Valor: totalGastos.value },
-      { Indicador: 'Balance', Valor: balance.value },
+    libro.creator = 'StudentWallet'
+    libro.subject = 'Reporte financiero administrativo'
+    libro.title = 'Reporte financiero StudentWallet'
+    libro.created = new Date()
+
+    // COLORES DEL REPORTE
+    const azulOscuro = '172554'
+    const azul = '2563EB'
+    const azulClaro = 'DBEAFE'
+    const grisClaro = 'F1F5F9'
+    const blanco = 'FFFFFF'
+    const grisTexto = '475569'
+    const verdeClaro = 'DCFCE7'
+
+    const formatoMoneda = '"$"#,##0.00;[Red]-"$"#,##0.00'
+
+    const fechaGeneracion = new Date().toLocaleDateString('es-SV')
+
+    // =====================================
+    // HOJA 1: RESUMEN
+    // =====================================
+
+    const hojaResumen = libro.addWorksheet('Resumen')
+
+    hojaResumen.columns = [
+      { key: 'indicador', width: 28 },
+      { key: 'valor', width: 25 },
     ]
 
-    const libro = XLSX.utils.book_new()
+    hojaResumen.mergeCells('A1:B1')
 
-    const hojaDatos = XLSX.utils.json_to_sheet(filas)
-    hojaDatos['!cols'] = [
-      { wch: 20 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 16 },
+    const tituloResumen = hojaResumen.getCell('A1')
+    tituloResumen.value = 'STUDENTWALLET'
+    tituloResumen.font = {
+      name: 'Arial',
+      size: 18,
+      bold: true,
+      color: { argb: blanco },
+    }
+    tituloResumen.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: azulOscuro },
+    }
+    tituloResumen.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+    }
+
+    hojaResumen.getRow(1).height = 35
+
+    hojaResumen.mergeCells('A2:B2')
+
+    const subtituloResumen = hojaResumen.getCell('A2')
+    subtituloResumen.value = 'Reporte financiero administrativo'
+    subtituloResumen.font = {
+      name: 'Arial',
+      size: 12,
+      bold: true,
+      color: { argb: azulOscuro },
+    }
+    subtituloResumen.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+    }
+
+    hojaResumen.mergeCells('A3:B3')
+
+    hojaResumen.getCell('A3').value =
+      `Período: ${periodo.value} | Generado: ${fechaGeneracion}`
+
+    hojaResumen.getCell('A3').font = {
+      name: 'Arial',
+      size: 10,
+      italic: true,
+      color: { argb: grisTexto },
+    }
+
+    hojaResumen.getCell('A3').alignment = {
+      horizontal: 'center',
+    }
+
+    // Encabezados
+    const encabezadoResumen = hojaResumen.getRow(5)
+
+    encabezadoResumen.values = ['Indicador', 'Valor']
+
+    encabezadoResumen.eachCell(cell => {
+      cell.font = {
+        name: 'Arial',
+        bold: true,
+        color: { argb: blanco },
+      }
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: azul },
+      }
+
+      cell.alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      }
+
+      cell.border = {
+        bottom: {
+          style: 'medium',
+          color: { argb: azulOscuro },
+        },
+      }
+    })
+
+    encabezadoResumen.height = 25
+
+    // Datos del resumen
+    const datosResumen = [
+      ['Período', periodo.value],
+      ['Total de ingresos', totalIngresos.value],
+      ['Total de gastos', totalGastos.value],
+      ['Balance general', balance.value],
+      ['Meses incluidos', registros.value.length],
     ]
 
-    const hojaResumen = XLSX.utils.json_to_sheet(resumen)
-    hojaResumen['!cols'] = [
-      { wch: 22 },
-      { wch: 24 },
+    datosResumen.forEach((fila, indice) => {
+      const numeroFila = indice + 6
+      const nuevaFila = hojaResumen.getRow(numeroFila)
+
+      nuevaFila.values = fila
+
+      nuevaFila.eachCell((cell, numeroColumna) => {
+        cell.font = {
+          name: 'Arial',
+          size: 11,
+          bold: numeroFila === 9,
+          color: {
+            argb: numeroFila === 9 ? '166534' : grisTexto,
+          },
+        }
+
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: numeroFila === 9
+            ? verdeClaro
+            : indice % 2 === 0
+              ? blanco
+              : grisClaro,
+        }
+
+        cell.border = {
+          bottom: {
+            style: 'thin',
+            color: { argb: 'CBD5E1' },
+          },
+        }
+
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: numeroColumna === 2 ? 'right' : 'left',
+        }
+
+        if (
+          numeroColumna === 2 &&
+          [7, 8, 9].includes(numeroFila)
+        ) {
+          cell.numFmt = formatoMoneda
+        }
+      })
+
+      nuevaFila.height = 23
+    })
+
+    hojaResumen.autoFilter = 'A5:B10'
+    hojaResumen.views = [
+      { state: 'frozen', ySplit: 5 },
     ]
 
-    XLSX.utils.book_append_sheet(libro, hojaResumen, 'Resumen')
-    XLSX.utils.book_append_sheet(libro, hojaDatos, 'Finanzas')
+    // =====================================
+    // HOJA 2: FINANZAS
+    // =====================================
 
-    XLSX.writeFile(libro, 'StudentWallet_Reporte.xlsx')
+    const hojaFinanzas = libro.addWorksheet('Finanzas')
 
-    mensaje.value = 'Reporte Excel generado correctamente.'
+    hojaFinanzas.columns = [
+      { header: 'Mes', key: 'mes', width: 22 },
+      { header: 'Ingresos', key: 'ingresos', width: 20 },
+      { header: 'Gastos', key: 'gastos', width: 20 },
+      { header: 'Balance', key: 'balance', width: 20 },
+    ]
+
+    hojaFinanzas.mergeCells('A1:D1')
+
+    const tituloFinanzas = hojaFinanzas.getCell('A1')
+    tituloFinanzas.value = 'REPORTE FINANCIERO MENSUAL'
+    tituloFinanzas.font = {
+      name: 'Arial',
+      size: 18,
+      bold: true,
+      color: { argb: blanco },
+    }
+    tituloFinanzas.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: azulOscuro },
+    }
+    tituloFinanzas.alignment = {
+      horizontal: 'center',
+      vertical: 'middle',
+    }
+
+    hojaFinanzas.getRow(1).height = 35
+
+    hojaFinanzas.mergeCells('A2:D2')
+
+    hojaFinanzas.getCell('A2').value =
+      `Período: ${periodo.value} | Generado: ${fechaGeneracion}`
+
+    hojaFinanzas.getCell('A2').font = {
+      name: 'Arial',
+      size: 10,
+      italic: true,
+      color: { argb: grisTexto },
+    }
+
+    hojaFinanzas.getCell('A2').alignment = {
+      horizontal: 'center',
+    }
+
+    // Encabezados
+    const encabezadoFinanzas = hojaFinanzas.getRow(4)
+
+    encabezadoFinanzas.values = [
+      'Mes',
+      'Ingresos',
+      'Gastos',
+      'Balance',
+    ]
+
+    encabezadoFinanzas.eachCell(cell => {
+      cell.font = {
+        name: 'Arial',
+        bold: true,
+        color: { argb: blanco },
+      }
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: azul },
+      }
+
+      cell.alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      }
+
+      cell.border = {
+        bottom: {
+          style: 'medium',
+          color: { argb: azulOscuro },
+        },
+      }
+    })
+
+    encabezadoFinanzas.height = 25
+
+    // Registros financieros
+    registros.value.forEach((item, indice) => {
+      const fila = hojaFinanzas.addRow({
+        mes: item.mes,
+        ingresos: item.ingresos,
+        gastos: item.gastos,
+        balance: item.ingresos - item.gastos,
+      })
+
+      fila.eachCell((cell, numeroColumna) => {
+        cell.font = {
+          name: 'Arial',
+          size: 11,
+          color: { argb: grisTexto },
+        }
+
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: indice % 2 === 0 ? blanco : grisClaro,
+        }
+
+        cell.border = {
+          bottom: {
+            style: 'thin',
+            color: { argb: 'CBD5E1' },
+          },
+        }
+
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: numeroColumna === 1 ? 'left' : 'right',
+        }
+
+        if (numeroColumna > 1) {
+          cell.numFmt = formatoMoneda
+        }
+      })
+
+      fila.height = 23
+    })
+
+    // Fila de totales
+    const filaTotal = hojaFinanzas.addRow({
+      mes: 'TOTAL',
+      ingresos: totalIngresos.value,
+      gastos: totalGastos.value,
+      balance: balance.value,
+    })
+
+    filaTotal.eachCell(cell => {
+      cell.font = {
+        name: 'Arial',
+        size: 11,
+        bold: true,
+        color: { argb: blanco },
+      }
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: azulOscuro },
+      }
+
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: 'right',
+      }
+
+      cell.border = {
+        top: {
+          style: 'medium',
+          color: { argb: azul },
+        },
+      }
+    })
+
+    filaTotal.getCell(1).alignment = {
+      horizontal: 'left',
+      vertical: 'middle',
+    }
+
+    for (let columna = 2; columna <= 4; columna++) {
+      filaTotal.getCell(columna).numFmt = formatoMoneda
+    }
+
+    filaTotal.height = 28
+
+    // Filtros y encabezados inmovilizados
+    hojaFinanzas.autoFilter = {
+      from: 'A4',
+      to: `D${registros.value.length + 4}`,
+    }
+
+    hojaFinanzas.views = [
+      { state: 'frozen', ySplit: 4 },
+    ]
+
+    // =====================================
+    // DESCARGAR ARCHIVO
+    // =====================================
+
+    const contenido = await libro.xlsx.writeBuffer()
+
+    const archivo = new Blob(
+      [contenido],
+      {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }
+    )
+
+    const url = URL.createObjectURL(archivo)
+    const enlace = document.createElement('a')
+
+    enlace.href = url
+    enlace.download = 'StudentWallet_Reporte.xlsx'
+
+    document.body.appendChild(enlace)
+    enlace.click()
+    document.body.removeChild(enlace)
+
+    URL.revokeObjectURL(url)
+
+    mensaje.value = 'Reporte Excel con formato generado correctamente.'
     snackbar.value = true
+
   } catch (error) {
-    console.error(error)
+    console.error('Error al exportar Excel:', error)
+
     mensaje.value = 'No se pudo generar el archivo Excel.'
     snackbar.value = true
   }
 }
+
 
 function exportarPDF() {
   try {
@@ -339,10 +705,12 @@ function exportarPDF() {
 </template>
 
 <style scoped>
+
 .reportes-page {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header {
@@ -356,18 +724,19 @@ function exportarPDF() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .report-card,
 .stat-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
 }
@@ -376,16 +745,17 @@ function exportarPDF() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .section-header h2 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 6px;
 }
@@ -397,17 +767,53 @@ function exportarPDF() {
   gap: 12px;
 }
 
+/* Indicadores financieros */
 .stat-card p {
   margin-top: 15px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
 }
 
 .stat-card h2 {
   margin-top: 8px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 25px;
   font-weight: 800;
+}
+
+/* Selector de período */
+.report-card :deep(.v-field) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.report-card :deep(.v-label) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* Tabla */
+.report-card :deep(.v-table) {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.report-card :deep(th) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.report-card :deep(td) {
+  color: rgb(var(--v-theme-on-surface));
+  white-space: nowrap;
+}
+
+.report-card :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+/* Alertas */
+.reportes-page :deep(.v-alert) {
+  color: rgb(var(--v-theme-on-surface));
 }
 
 @media (max-width: 600px) {
@@ -419,6 +825,11 @@ function exportarPDF() {
     font-size: 24px;
   }
 
+  .report-card,
+  .stat-card {
+    padding: 18px;
+  }
+
   .export-buttons {
     justify-content: stretch;
   }
@@ -427,4 +838,5 @@ function exportarPDF() {
     width: 100%;
   }
 }
+
 </style>

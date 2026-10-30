@@ -338,27 +338,38 @@ function eliminarCategoria() {
 
         <v-card-text>
           <v-form ref="formulario" @submit.prevent="guardarCategoria">
-            <v-text-field
-              v-model="categoriaForm.nombre"
-              label="Nombre de la categoría"
-              placeholder="Ej. Servicios básicos"
-              variant="outlined"
-              rounded="lg"
-              counter="40"
-              maxlength="40"
-              :rules="reglas"
-            />
+            <!-- NOMBRE DE LA CATEGORÍA -->
+<div class="category-form-field">
+  <label class="form-label">Nombre de la categoría</label>
 
-            <v-select
-              v-model="categoriaForm.tipo"
-              label="Tipo de categoría"
-              :items="[
-                { title: 'Gasto', value: 'expense' },
-                { title: 'Ingreso', value: 'income' },
-              ]"
-              variant="outlined"
-              rounded="lg"
-            />
+  <v-text-field
+    v-model="categoriaForm.nombre"
+    placeholder="Ej. Servicios básicos"
+    variant="outlined"
+    rounded="lg"
+    counter="40"
+    maxlength="40"
+    :rules="reglas"
+    class="category-name-input"
+    hide-details="auto"
+  />
+</div>
+
+           <!-- TIPO DE CATEGORÍA -->
+<div class="category-form-field">
+  <label class="form-label">Tipo de categoría</label>
+
+  <v-select
+    v-model="categoriaForm.tipo"
+    :items="[
+      { title: 'Gasto', value: 'expense' },
+      { title: 'Ingreso', value: 'income' },
+    ]"
+    variant="outlined"
+    rounded="lg"
+    hide-details
+  />
+</div>
 
             <p class="field-label">Selecciona un ícono</p>
 
@@ -492,11 +503,15 @@ function eliminarCategoria() {
 </template>
 
 <style scoped>
+
 .categorias-page {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
 }
+
+/* ENCABEZADO */
 
 .page-header {
   display: flex;
@@ -509,21 +524,25 @@ function eliminarCategoria() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
+
+/* TARJETAS DE RESUMEN */
 
 .summary-card {
   display: flex;
   align-items: center;
   gap: 18px;
   padding: 24px;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 18px;
 }
 
@@ -537,28 +556,32 @@ function eliminarCategoria() {
 }
 
 .expense-icon {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.13);
 }
 
 .income-icon {
-  background: #d1fae5;
+  background: rgba(16, 185, 129, 0.13);
 }
 
 .summary-card p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .summary-card h2 {
   font-size: 29px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 5px;
 }
 
+/* CONTENEDOR PRINCIPAL */
+
 .content-card {
   padding: 25px;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 18px;
 }
 
@@ -572,14 +595,16 @@ function eliminarCategoria() {
 .section-heading h2 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-heading p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
+
+/* FILTROS */
 
 .filters {
   display: flex;
@@ -594,16 +619,21 @@ function eliminarCategoria() {
   min-width: 200px;
 }
 
+/* TARJETAS DE CATEGORÍAS */
+
 .category-card {
   padding: 22px;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .category-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px #0f172a0d !important;
+  border-color: rgba(var(--v-theme-primary), 0.35);
+  box-shadow: 0 8px 24px rgba(var(--v-theme-on-surface), 0.08) !important;
 }
 
 .category-top {
@@ -624,26 +654,66 @@ function eliminarCategoria() {
 .category-card h3 {
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 20px;
 }
 
+/* DIÁLOGOS */
+
 .dialog-card {
   padding: 12px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-title {
   font-size: 21px;
   font-weight: 800;
   padding: 20px 24px;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+/* CAMPOS DEL FORMULARIO DE CATEGORÍAS */
+
+.category-form-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgb(var(--v-theme-on-surface));
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.category-name-input {
+  margin-bottom: 0;
+}
+
+/* SEPARACIÓN DEL MENSAJE DE VALIDACIÓN */
+
+.category-name-input :deep(.v-input__details) {
+  padding-top: 6px;
+  min-height: 30px;
+}
+
+.category-name-input :deep(.v-messages) {
+  line-height: 1.4;
 }
 
 .field-label {
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   margin-bottom: 12px;
 }
+
+/* SELECTOR DE ICONOS */
 
 .icon-grid {
   display: grid;
@@ -653,17 +723,25 @@ function eliminarCategoria() {
 
 .icon-option {
   height: 43px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.18);
   border-radius: 10px;
-  color: #64748b;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  color: rgb(var(--v-theme-on-surface-variant));
   cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.icon-option:hover {
+  border-color: rgb(var(--v-theme-primary));
 }
 
 .icon-selected {
-  background: #eff6ff;
-  border-color: #2563eb;
-  color: #2563eb;
+  background: rgba(var(--v-theme-primary), 0.15);
+  border-color: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-primary));
 }
+
+/* SELECTOR DE COLORES */
 
 .colors {
   display: flex;
@@ -680,9 +758,11 @@ function eliminarCategoria() {
 }
 
 .color-selected {
-  outline: 2px solid #94a3b8;
+  outline: 2px solid rgb(var(--v-theme-on-surface-variant));
   outline-offset: 3px;
 }
+
+/* BOTONES DEL DIÁLOGO */
 
 .dialog-actions {
   display: flex;
@@ -690,6 +770,16 @@ function eliminarCategoria() {
   gap: 12px;
   margin-top: 30px;
 }
+
+/* DIVISORES Y COMPONENTES VUETIFY */
+
+.content-card :deep(.v-divider),
+.dialog-card :deep(.v-divider) {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
+  opacity: 1;
+}
+
+/* RESPONSIVE */
 
 @media (max-width: 600px) {
   .categorias-page {
@@ -713,4 +803,12 @@ function eliminarCategoria() {
     grid-template-columns: repeat(5, 1fr);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .category-card,
+  .icon-option {
+    transition: none;
+  }
+}
+
 </style>

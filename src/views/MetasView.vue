@@ -384,28 +384,18 @@ function formatearFecha(fecha) {
             />
 
             <label>Ícono de la meta</label>
-            <v-select
-              v-model="icono"
-              :items="iconos"
-              item-title="title"
-              item-value="value"
-              variant="outlined"
-              rounded="lg"
-              class="mt-2 mb-4"
-            >
-              <template #selection="{ item }">
-                <v-icon class="mr-2">{{ item.raw.value }}</v-icon>
-                {{ item.raw.title }}
-              </template>
 
-              <template #item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <template #prepend>
-                    <v-icon>{{ item.raw.value }}</v-icon>
-                  </template>
-                </v-list-item>
-              </template>
-            </v-select>
+<v-select
+  v-model="icono"
+  :items="iconos"
+  item-title="title"
+  item-value="value"
+  variant="outlined"
+  rounded="lg"
+  class="mt-2 mb-4"
+>
+</v-select>
+
 
             <v-btn
               type="submit"
@@ -526,12 +516,15 @@ function formatearFecha(fecha) {
 </template>
 
 <style scoped>
+
 .goals-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* ENCABEZADOS */
 .page-header,
 .stat-heading,
 .goal-top,
@@ -550,50 +543,55 @@ function formatearFecha(fecha) {
 }
 
 .page-header h1 {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   font-size: 30px;
   font-weight: 800;
 }
 
 .page-header p,
 .section-heading p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   margin-top: 7px;
 }
 
+/* ESTADÍSTICAS */
 .stat-card {
   min-height: 175px;
   padding: 26px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
 .stat-card:hover,
 .goal-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px #0f172a12;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
 }
 
 .stat-heading {
   font-size: 14px;
   font-weight: 600;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stat-card h2 {
   font-size: 31px;
   font-weight: 800;
   margin-top: 25px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .stat-card p {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
   margin-top: 10px;
 }
 
+/* TARJETA DESTACADA */
 .gradient-card {
   background: linear-gradient(135deg, #2563eb, #4338ca, #7c3aed);
   color: white;
@@ -601,10 +599,12 @@ function formatearFecha(fecha) {
 }
 
 .gradient-card .stat-heading,
+.gradient-card h2,
 .gradient-card p {
-  color: white;
+  color: white !important;
 }
 
+/* SECCIÓN DE METAS */
 .section-heading {
   margin: 35px 0 20px;
 }
@@ -612,13 +612,16 @@ function formatearFecha(fecha) {
 .section-heading h2 {
   font-size: 21px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
+/* TARJETAS DE METAS */
 .goal-card {
   padding: 25px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
@@ -626,7 +629,7 @@ function formatearFecha(fecha) {
   width: 56px;
   height: 56px;
   border-radius: 17px;
-  background: #ede9fe;
+  background: rgba(var(--v-theme-primary), 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -635,7 +638,7 @@ function formatearFecha(fecha) {
 .goal-name {
   font-size: 20px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 22px;
 }
 
@@ -643,7 +646,7 @@ function formatearFecha(fecha) {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 8px;
 }
@@ -659,41 +662,47 @@ function formatearFecha(fecha) {
 .goal-amount h2 {
   font-size: 28px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .goal-amount span {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
 }
 
 .progress-details {
   margin-top: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
 }
 
+/* ESTADO VACÍO */
 .empty-state {
   text-align: center;
   padding: 70px 20px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .empty-state h3 {
   font-size: 21px;
   font-weight: 800;
   margin-top: 15px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .empty-state p {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin: 12px 0 25px;
 }
 
+/* FORMULARIOS */
 .dialog-card {
   padding: 12px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-header {
@@ -703,10 +712,11 @@ function formatearFecha(fecha) {
 .dialog-header h3 {
   font-size: 21px;
   font-weight: 800;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 5px;
 }
@@ -714,24 +724,32 @@ function formatearFecha(fecha) {
 .dialog-card label {
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
+/* DIÁLOGO DE ELIMINACIÓN */
 .delete-dialog {
   padding: 30px;
   text-align: center;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog h3 {
   font-size: 21px;
   font-weight: 800;
   margin-top: 15px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
   margin-top: 12px;
+}
+
+.delete-dialog p strong {
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-actions {
@@ -739,6 +757,7 @@ function formatearFecha(fecha) {
   margin-top: 25px;
 }
 
+/* RESPONSIVE */
 @media (max-width: 600px) {
   .page-header h1 {
     font-size: 25px;
@@ -749,10 +768,12 @@ function formatearFecha(fecha) {
   }
 }
 
+/* ACCESIBILIDAD */
 @media (prefers-reduced-motion: reduce) {
   .stat-card,
   .goal-card {
     transition: none;
   }
 }
+
 </style>

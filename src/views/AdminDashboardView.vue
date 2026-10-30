@@ -211,10 +211,12 @@ const estadisticas = [
 </template>
 
 <style scoped>
+
 .admin-dashboard {
   padding: 32px;
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -229,19 +231,20 @@ const estadisticas = [
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stat-card,
 .content-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
   height: 100%;
@@ -259,12 +262,12 @@ const estadisticas = [
 
 .stat-title {
   font-size: 14px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stat-card h2 {
   font-size: 30px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 8px;
 }
 
@@ -278,12 +281,12 @@ const estadisticas = [
 .section-header h3 {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-header p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
@@ -293,7 +296,32 @@ const estadisticas = [
   gap: 12px;
   margin-bottom: 20px;
   font-size: 14px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+/* Tabla */
+.content-card :deep(.v-table) {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.content-card :deep(table) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.content-card :deep(th) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.content-card :deep(td) {
+  color: rgb(var(--v-theme-on-surface));
+  white-space: nowrap;
+}
+
+.content-card :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 @media (max-width: 600px) {
@@ -309,4 +337,5 @@ const estadisticas = [
     overflow-x: auto;
   }
 }
+
 </style>
