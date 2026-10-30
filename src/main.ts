@@ -11,11 +11,11 @@ import { createApp } from 'vue'
 // Plugins de Vuetify
 import { registerPlugins } from '@/plugins'
 
-// Pinia
-import { createPinia } from 'pinia'
-
 // Componente principal
 import App from './App.vue'
+
+import 'vuetify/styles'
+import '@mdi/font/css/materialdesignicons.css'
 
 // Estilos
 import 'unfonts.css'
@@ -25,9 +25,6 @@ const app = createApp(App)
 
 // Registrar plugins de Vuetify
 registerPlugins(app)
-
-// Registrar Pinia
-app.use(createPinia())
 
 // Montar aplicación
 app.mount('#app')
