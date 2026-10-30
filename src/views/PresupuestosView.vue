@@ -17,6 +17,59 @@ const limite = ref(null)
 const mes = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
 const mesSeleccionado = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
 
+const menuMes = ref(false)
+const menuMesFormulario = ref(false)
+
+const anioSelector = ref(Number(mesSeleccionado.value.slice(0, 4)))
+const anioFormulario = ref(Number(mes.value.slice(0, 4)))
+
+const meses = [
+  { nombre: 'Enero', valor: '01' },
+  { nombre: 'Febrero', valor: '02' },
+  { nombre: 'Marzo', valor: '03' },
+  { nombre: 'Abril', valor: '04' },
+  { nombre: 'Mayo', valor: '05' },
+  { nombre: 'Junio', valor: '06' },
+  { nombre: 'Julio', valor: '07' },
+  { nombre: 'Agosto', valor: '08' },
+  { nombre: 'Septiembre', valor: '09' },
+  { nombre: 'Octubre', valor: '10' },
+  { nombre: 'Noviembre', valor: '11' },
+  { nombre: 'Diciembre', valor: '12' },
+]
+
+function nombreMes(valor) {
+  if (!valor) return 'Seleccionar mes'
+
+  const [anio, numeroMes] = valor.split('-')
+  const mesEncontrado = meses.find(m => m.valor === numeroMes)
+
+  return mesEncontrado
+    ? `${mesEncontrado.nombre} ${anio}`
+    : valor
+}
+
+function abrirSelectorMes() {
+  anioSelector.value = Number(mesSeleccionado.value.slice(0, 4))
+  menuMes.value = true
+}
+
+function seleccionarMes(valor) {
+  mesSeleccionado.value = `${anioSelector.value}-${valor}`
+  menuMes.value = false
+}
+
+function abrirSelectorMesFormulario() {
+  anioFormulario.value = Number(mes.value.slice(0, 4))
+  menuMesFormulario.value = true
+}
+
+function seleccionarMesFormulario(valor) {
+  mes.value = `${anioFormulario.value}-${valor}`
+  menuMesFormulario.value = false
+}
+
+
 const snackbar = ref(false)
 const mensaje = ref('')
 const colorAlerta = ref('success')
@@ -97,12 +150,15 @@ function estadoPresupuesto(porcentaje) {
   return 'Bajo control'
 }
 
+
 function abrirFormulario() {
   categoria.value = null
   limite.value = null
   mes.value = mesSeleccionado.value
+  anioFormulario.value = Number(mes.value.slice(0, 4))
   dialog.value = true
 }
+
 
 async function guardar() {
   const resultado = await form.value.validate()
@@ -173,11 +229,85 @@ function eliminar() {
       </v-btn>
     </div>
 
-    <div class="month-filter">
-      <v-icon color="primary">mdi-calendar-month-outline</v-icon>
-      <span>Seleccionar mes</span>
-      <input v-model="mesSeleccionado" type="month" />
-    </div>
+    
+<div class="month-filter">
+  <v-icon color="primary">mdi-calendar-month-outline</v-icon>
+
+  <span>Seleccionar mes</span>
+
+  <v-menu
+    v-model="menuMes"
+    location="bottom start"
+    :close-on-content-click="false"
+    @update:model-value="valor => {
+      if (valor) {
+        anioSelector = Number(mesSeleccionado.slice(0, 4))
+      }
+    }"
+  >
+    <template #activator="{ props }">
+      <v-btn
+        v-bind="props"
+        variant="tonal"
+        color="primary"
+        rounded="lg"
+        append-icon="mdi-chevron-down"
+      >
+        {{ nombreMes(mesSeleccionado) }}
+      </v-btn>
+    </template>
+
+    <v-card class="month-picker-card" elevation="8">
+      <div class="month-picker-header">
+        <v-btn
+          icon="mdi-chevron-left"
+          variant="text"
+          size="small"
+          @click="anioSelector--"
+        />
+
+        <strong>{{ anioSelector }}</strong>
+
+        <v-btn
+          icon="mdi-chevron-right"
+          variant="text"
+          size="small"
+          @click="anioSelector++"
+        />
+      </div>
+
+      <v-divider />
+
+      <v-row dense class="month-grid">
+        <v-col
+          v-for="item in meses"
+          :key="item.valor"
+          cols="4"
+        >
+          <v-btn
+            block
+            rounded="lg"
+            size="small"
+            :color="
+              mesSeleccionado === `${anioSelector}-${item.valor}`
+                ? 'primary'
+                : undefined
+            "
+            :variant="
+              mesSeleccionado === `${anioSelector}-${item.valor}`
+                ? 'flat'
+                : 'text'
+            "
+            @click="seleccionarMes(item.valor)"
+          >
+            {{ item.nombre.slice(0, 3) }}
+          </v-btn>
+        </v-col>
+      </v-row>
+    </v-card>
+  </v-menu>
+</div>
+
 
     <!-- RESUMEN -->
     <v-row class="mt-5">
@@ -396,14 +526,76 @@ function eliminar() {
             />
 
             <label>Mes</label>
-            <v-text-field
-              v-model="mes"
-              type="month"
-              variant="outlined"
-              rounded="lg"
-              :rules="[obligatorio]"
-              class="mt-2 mb-3"
-            />
+
+<v-menu
+  v-model="menuMesFormulario"
+  location="bottom start"
+  :close-on-content-click="false"
+>
+  <template #activator="{ props }">
+    <v-btn
+      v-bind="props"
+      block
+      variant="outlined"
+      rounded="lg"
+      color="primary"
+      class="month-form-button mt-2 mb-3"
+      prepend-icon="mdi-calendar-month-outline"
+      append-icon="mdi-chevron-down"
+    >
+      {{ nombreMes(mes) }}
+    </v-btn>
+  </template>
+
+  <v-card class="month-picker-card" elevation="8">
+    <div class="month-picker-header">
+      <v-btn
+        icon="mdi-chevron-left"
+        variant="text"
+        size="small"
+        @click="anioFormulario--"
+      />
+
+      <strong>{{ anioFormulario }}</strong>
+
+      <v-btn
+        icon="mdi-chevron-right"
+        variant="text"
+        size="small"
+        @click="anioFormulario++"
+      />
+    </div>
+
+    <v-divider />
+
+    <v-row dense class="month-grid">
+      <v-col
+        v-for="item in meses"
+        :key="item.valor"
+        cols="4"
+      >
+        <v-btn
+          block
+          rounded="lg"
+          size="small"
+          :color="
+            mes === `${anioFormulario}-${item.valor}`
+              ? 'primary'
+              : undefined
+          "
+          :variant="
+            mes === `${anioFormulario}-${item.valor}`
+              ? 'flat'
+              : 'text'
+          "
+          @click="seleccionarMesFormulario(item.valor)"
+        >
+          {{ item.nombre.slice(0, 3) }}
+        </v-btn>
+      </v-col>
+    </v-row>
+  </v-card>
+</v-menu>
 
             <v-alert
               type="info"
@@ -479,12 +671,15 @@ function eliminar() {
 </template>
 
 <style scoped>
+
 .budgets-page {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* ENCABEZADOS */
 .page-header,
 .summary-heading,
 .budget-top,
@@ -505,26 +700,27 @@ function eliminar() {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
 .page-header p,
 .section-heading p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 7px;
   font-size: 14px;
 }
 
+/* FILTRO DE MES */
 .month-filter {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: white;
-  border: 1px solid #e9edf5;
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 12px;
   padding: 12px 16px;
   margin-top: 28px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 13px;
   font-weight: 700;
 }
@@ -533,25 +729,31 @@ function eliminar() {
   border: none;
   outline: none;
   font: inherit;
-  color: #2563eb;
+  color: rgb(var(--v-theme-primary));
+  background: transparent;
+  color-scheme: light dark;
+  min-width: 125px;
 }
 
+/* TARJETAS DE RESUMEN */
 .summary-card {
   padding: 26px;
   min-height: 170px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
 .summary-card:hover,
 .budget-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 35px #0f172a12;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12);
 }
 
 .summary-heading {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   font-weight: 600;
 }
@@ -561,14 +763,16 @@ function eliminar() {
   font-weight: 800;
   margin-top: 24px;
   letter-spacing: -1px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .summary-card p {
   margin-top: 10px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
 }
 
+/* TARJETA DESTACADA */
 .gradient-card {
   background: linear-gradient(135deg, #2563eb, #4338ca, #7c3aed);
   color: white;
@@ -576,10 +780,12 @@ function eliminar() {
 }
 
 .gradient-card .summary-heading,
+.gradient-card h2,
 .gradient-card p {
-  color: white;
+  color: white !important;
 }
 
+/* SECCIÓN DE PRESUPUESTOS */
 .section-heading {
   margin: 35px 0 20px;
 }
@@ -587,13 +793,16 @@ function eliminar() {
 .section-heading h2 {
   font-size: 21px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
 }
 
+/* TARJETAS POR CATEGORÍA */
 .budget-card {
   padding: 24px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 20px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
@@ -613,14 +822,14 @@ function eliminar() {
 }
 
 .category-info h3 {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 16px;
   font-weight: 800;
 }
 
 .category-info span,
 .budget-amounts span {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
 }
 
@@ -631,13 +840,13 @@ function eliminar() {
 .budget-amounts h3 {
   font-size: 20px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 5px;
 }
 
 .progress-info {
   margin-top: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
 }
 
@@ -645,33 +854,39 @@ function eliminar() {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-top: 1px solid #e9edf5;
+  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   padding-top: 17px;
   margin-top: 20px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
 }
 
+/* ESTADO VACÍO */
 .empty-state {
   text-align: center;
   padding: 65px 20px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .empty-state h3 {
   font-size: 20px;
   margin-top: 15px;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .empty-state p {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin: 10px 0 22px;
 }
 
+/* DIÁLOGO DE CREACIÓN */
 .dialog-card {
   padding: 12px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-title {
@@ -681,34 +896,43 @@ function eliminar() {
 .dialog-title h3 {
   font-size: 21px;
   font-weight: 800;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .dialog-title p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
 .dialog-card label {
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
+/* DIÁLOGO DE ELIMINACIÓN */
 .delete-dialog {
   padding: 30px;
   text-align: center;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog h3 {
   font-size: 21px;
   margin-top: 15px;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.7;
   margin-top: 12px;
+}
+
+.delete-dialog p strong {
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-actions {
@@ -716,6 +940,7 @@ function eliminar() {
   margin-top: 25px;
 }
 
+/* RESPONSIVE */
 @media (max-width: 600px) {
   .page-header h1 {
     font-size: 25px;
@@ -724,12 +949,74 @@ function eliminar() {
   .summary-card h2 {
     font-size: 26px;
   }
+
+  .month-filter {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
 }
 
+/* ACCESIBILIDAD */
 @media (prefers-reduced-motion: reduce) {
   .summary-card,
   .budget-card {
     transition: none;
   }
+.month-filter {
+  flex-wrap: wrap;
 }
+
+.month-filter > span {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.month-picker-card {
+  min-width: 280px;
+  padding: 14px;
+  border-radius: 18px !important;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.month-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 5px 12px;
+}
+
+.month-picker-header strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.month-grid {
+  padding-top: 12px;
+}
+
+.month-grid :deep(.v-btn) {
+  min-width: 0;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.month-picker-card :deep(.v-divider) {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.month-form-button {
+  justify-content: flex-start;
+  min-height: 48px;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+@media (max-width: 600px) {
+  .month-picker-card {
+    min-width: 260px;
+  }
+}
+}
+
 </style>

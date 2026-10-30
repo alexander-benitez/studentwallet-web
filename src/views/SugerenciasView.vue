@@ -249,28 +249,31 @@ async function enviarComentario() {
 </template>
 
 <style scoped>
+
 .sugerencias-page {
   padding: 32px;
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .content-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 20px;
   padding: 28px;
 }
@@ -286,29 +289,30 @@ async function enviarComentario() {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: #dbeafe;
+  background: rgba(var(--v-theme-primary), 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .content-card h2 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .card-heading p,
 .section-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
 .content-card label {
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .rating-container {
@@ -319,7 +323,7 @@ async function enviarComentario() {
 }
 
 .rating-container span {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
 }
 
@@ -336,19 +340,19 @@ async function enviarComentario() {
 }
 
 .benefit strong {
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
 }
 
 .benefit p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 4px;
 }
 
 .comment-item {
   padding: 17px 0;
-  border-bottom: 1px solid #e8edf5;
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
 }
 
 .comment-top {
@@ -358,15 +362,19 @@ async function enviarComentario() {
   gap: 8px;
 }
 
+.comment-top strong {
+  color: rgb(var(--v-theme-on-surface));
+}
+
 .comment-item p {
-  color: #475569;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin: 10px 0;
   overflow-wrap: anywhere;
 }
 
 .comment-item small {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 @media (max-width: 600px) {
@@ -382,4 +390,5 @@ async function enviarComentario() {
     font-size: 25px;
   }
 }
+
 </style>

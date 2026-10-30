@@ -288,166 +288,277 @@ await router.push(destino)
 </template>
 
 <style scoped>
+
+/* =========================================
+   ESTRUCTURA GENERAL
+========================================= */
+
 .login-page {
   min-height: 100vh;
-  background: #f8fafc;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: rgb(var(--v-theme-background));
 }
 
-.fill-height {
+.login-page > .v-row {
   min-height: 100vh;
 }
+
+/* =========================================
+   PANEL IZQUIERDO - IDENTIDAD STUDENTWALLET
+========================================= */
 
 .brand-panel {
   position: relative;
-  overflow: hidden;
-  background: linear-gradient(145deg, #1d4ed8, #4338ca 58%, #7c3aed);
-  color: white;
   display: flex;
-  align-items: center;
-  padding: 55px;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #FFFFFF;
+  background: linear-gradient(
+    135deg,
+    #14213D 0%,
+    #1E3A8A 55%,
+    #4338CA 100%
+  );
 }
 
 .brand-content {
   position: relative;
   z-index: 2;
-  width: 100%;
-  min-height: 75vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  width: 100%;
+  min-height: 100vh;
+  padding: 38px 48px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 24px;
+  gap: 10px;
+  color: #FFFFFF;
+  font-size: 23px;
   font-weight: 800;
-  letter-spacing: -0.8px;
+  letter-spacing: -0.5px;
 }
 
 .hero {
-  max-width: 530px;
-  animation: slideUp 0.8s ease both;
+  max-width: 560px;
+  margin: auto 0;
+  padding: 55px 0;
 }
 
 .hero h1 {
-  font-size: clamp(36px, 4vw, 58px);
-  line-height: 1.12;
+  margin: 20px 0;
+  color: #FFFFFF;
+  font-size: clamp(30px, 3vw, 43px);
   font-weight: 800;
-  letter-spacing: -2px;
+  line-height: 1.2;
+  letter-spacing: -1px;
 }
 
 .hero h1 span {
   display: block;
-  color: #a7f3d0;
+  color: #93C5FD;
 }
 
 .hero p {
-  font-size: 17px;
+  max-width: 540px;
+  margin-bottom: 24px;
+  color: #DBEAFE;
+  font-size: 16px;
   line-height: 1.8;
-  margin-top: 25px;
-  opacity: 0.88;
 }
 
 .features {
-  margin-top: 35px;
-  display: grid;
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  color: #FFFFFF;
+  font-size: 15px;
 }
 
 .features div {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 15px;
+  gap: 10px;
 }
 
 .features .v-icon {
-  color: #6ee7b7;
+  color: #86EFAC;
 }
 
 .footer-brand {
+  margin: 0;
+  color: #CBD5E1;
   font-size: 13px;
-  opacity: 0.65;
 }
 
 .glow {
   position: absolute;
+  z-index: 1;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
-  filter: blur(15px);
+  background: rgba(96, 165, 250, 0.15);
+  filter: blur(65px);
   pointer-events: none;
 }
 
 .glow-one {
-  width: 350px;
-  height: 350px;
-  background: #60a5fa;
-  opacity: 0.14;
-  top: -130px;
-  right: -120px;
+  top: -100px;
+  right: -80px;
 }
 
 .glow-two {
-  width: 280px;
-  height: 280px;
-  background: #a78bfa;
-  opacity: 0.2;
   bottom: -130px;
   left: -100px;
+  background: rgba(124, 58, 237, 0.2);
 }
+
+/* =========================================
+   PANEL DERECHO - FORMULARIO
+========================================= */
 
 .form-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 35px 24px;
+  min-height: 100vh;
+  padding: 35px;
+  background: rgb(var(--v-theme-background));
 }
 
 .login-card {
   width: 100%;
-  max-width: 430px;
-  padding: 28px;
-  background: transparent !important;
-  animation: slideUp 0.7s ease both;
+  max-width: none;
+  padding: 30px 45px;
+  overflow: visible;
+  color: rgb(var(--v-theme-on-surface));
+  background: rgb(var(--v-theme-surface)) !important;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  border-radius: 20px;
 }
 
 .welcome-icon {
-  width: 62px;
-  height: 62px;
-  border-radius: 18px;
-  background: #dbeafe;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 25px;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-primary), 0.12);
 }
 
 .login-card h2 {
-  font-size: 30px;
+  margin-bottom: 9px;
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 27px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
-  color: #64748b;
-  margin-top: 8px;
-  margin-bottom: 35px;
+  margin-bottom: 28px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .login-card label {
+  display: block;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
 }
 
-.forgot,
-.register-text a {
-  color: #2563eb;
-  text-decoration: none;
+/* =========================================
+   CAMPOS DE TEXTO
+========================================= */
+
+.login-card :deep(.v-field) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.login-card :deep(.v-field__input input),
+.login-card :deep(.v-field__input textarea) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface)) !important;
+  opacity: 1 !important;
+  caret-color: rgb(var(--v-theme-primary)) !important;
+}
+
+.login-card :deep(.v-field__input input::placeholder),
+.login-card :deep(.v-field__input textarea::placeholder) {
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface-variant)) !important;
+  opacity: 0.8 !important;
+}
+
+.login-card :deep(.v-field__prepend-inner .v-icon),
+.login-card :deep(.v-field__append-inner .v-icon) {
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+.login-card :deep(.v-field--variant-outlined .v-field__outline) {
+  color: rgba(var(--v-theme-on-surface), 0.25);
+}
+
+.login-card :deep(.v-field--focused .v-field__outline) {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+.login-card :deep(.v-messages) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* =========================================
+   TIPO DE ACCESO
+========================================= */
+
+.access-option {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 12px;
+  text-align: center;
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.16);
+  transition: 0.2s ease;
+}
+
+.access-option strong {
+  display: block;
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.access-option small {
+  display: block;
+  margin-top: 4px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-size: 11px;
+}
+
+.access-option:hover {
+  background: rgba(var(--v-theme-primary), 0.08);
+  border-color: rgb(var(--v-theme-primary));
+}
+
+.access-selected {
+  background: rgba(var(--v-theme-primary), 0.12) !important;
+  border: 2px solid rgb(var(--v-theme-primary)) !important;
+}
+
+/* =========================================
+   ENLACES Y BOTÓN
+========================================= */
+
+.forgot {
+  color: rgb(var(--v-theme-primary));
+  font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
 }
 
 .forgot:hover,
@@ -456,101 +567,107 @@ await router.push(destino)
 }
 
 .login-btn {
+  min-height: 54px;
+  margin-top: 5px;
   font-weight: 700;
-  text-transform: none;
   letter-spacing: 0;
-  transition: transform 0.25s, box-shadow 0.25s;
-}
-
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px #2563eb40;
 }
 
 .register-text {
+  margin-top: 22px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-size: 13px;
   text-align: center;
-  margin-top: 30px;
-  color: #64748b;
-  font-size: 14px;
+}
+
+.register-text a {
+  color: rgb(var(--v-theme-primary));
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .security {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-  color: #94a3b8;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
-  margin-top: 45px;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* =========================================
+   AUTOCOMPLETADO DEL NAVEGADOR
+========================================= */
+
+.login-card :deep(input:-webkit-autofill),
+.login-card :deep(input:-webkit-autofill:hover),
+.login-card :deep(input:-webkit-autofill:focus) {
+  -webkit-text-fill-color: rgb(var(--v-theme-on-surface)) !important;
+  caret-color: rgb(var(--v-theme-primary));
 }
+
+/* =========================================
+   RESPONSIVE
+========================================= */
 
 @media (max-width: 960px) {
   .brand-panel {
-    padding: 35px;
+    min-height: 420px;
   }
 
   .brand-content {
-    min-height: auto;
-    gap: 35px;
+    min-height: 420px;
+    padding: 30px;
+  }
+
+  .hero {
+    padding: 35px 0;
   }
 
   .hero h1 {
-    font-size: 36px;
+    font-size: 32px;
   }
 
-  .footer-brand {
-    display: none;
+  .form-panel {
+    min-height: auto;
+    padding: 40px 24px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero,
+@media (max-width: 600px) {
+  .brand-panel {
+    min-height: 350px;
+  }
+
+  .brand-content {
+    min-height: 350px;
+    padding: 24px;
+  }
+
+  .hero {
+    padding: 25px 0;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+  }
+
+  .hero p {
+    font-size: 14px;
+  }
+
+  .features {
+    font-size: 13px;
+  }
+
+  .form-panel {
+    padding: 25px 16px;
+  }
+
   .login-card {
-    animation: none;
+    padding: 22px 18px;
   }
 }
-.access-option {
-  flex: 1;
-  min-width: 0;
-  padding: 18px 10px;
-  text-align: center;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
-}
 
-.access-option strong {
-  color: #0f172a;
-  font-size: 14px;
-}
-
-.access-option small {
-  color: #64748b;
-  font-size: 12px;
-}
-
-.access-option:hover {
-  background: #f8faff;
-  border-color: #93c5fd;
-}
-
-.access-selected {
-  background: #eff6ff !important;
-  border: 2px solid #2563eb !important;
-}
 </style>

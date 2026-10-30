@@ -30,15 +30,16 @@ watch(
 )
 </script>
 
+
 <template>
   <v-layout class="admin-layout">
     <AdminSidebar v-model="drawer" />
 
     <v-app-bar
-      color="white"
       elevation="0"
       border="b"
       height="72"
+      class="admin-app-bar"
     >
       <v-app-bar-nav-icon @click="drawer = !drawer" />
 
@@ -63,19 +64,30 @@ watch(
   </v-layout>
 </template>
 
+
 <style scoped>
+
 .admin-layout {
   min-height: 100vh;
+  background: rgb(var(--v-theme-background));
+}
+
+.admin-app-bar {
+  background: rgb(var(--v-theme-surface)) !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+  border-color: rgba(var(--v-theme-on-surface), 0.12) !important;
 }
 
 .page-title {
   font-size: 17px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .admin-main {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
 }
+
 </style>

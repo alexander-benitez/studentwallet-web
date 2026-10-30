@@ -299,10 +299,12 @@ function colorEstado(estado) {
 </template>
 
 <style scoped>
+
 .admin-comentarios {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -317,19 +319,20 @@ function colorEstado(estado) {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
   margin-top: 8px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stat-card,
 .content-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
 }
@@ -345,30 +348,30 @@ function colorEstado(estado) {
 }
 
 .blue {
-  background: #dbeafe;
+  background: rgba(var(--v-theme-primary), 0.14);
 }
 
 .orange {
-  background: #fef3c7;
+  background: rgba(var(--v-theme-warning), 0.16);
 }
 
 .purple {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.14);
 }
 
 .green {
-  background: #d1fae5;
+  background: rgba(var(--v-theme-success), 0.14);
 }
 
 .stat-card p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
 }
 
 .stat-card h2 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 7px;
 }
 
@@ -382,17 +385,20 @@ function colorEstado(estado) {
 .section-header h2 {
   font-size: 19px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 5px;
 }
 
+/* Tarjetas de comentarios */
 .comment-card {
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 16px;
   padding: 22px;
   margin-top: 16px;
@@ -415,12 +421,12 @@ function colorEstado(estado) {
 }
 
 .user-info strong {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
 }
 
 .user-info p {
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 12px;
 }
 
@@ -430,7 +436,7 @@ function colorEstado(estado) {
 
 .comment-body p {
   margin-top: 15px;
-  color: #475569;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -444,7 +450,7 @@ function colorEstado(estado) {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  border-top: 1px solid #e8edf5;
+  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   padding-top: 18px;
   margin-top: 18px;
 }
@@ -452,12 +458,31 @@ function colorEstado(estado) {
 .comment-footer span {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .status-select {
   max-width: 190px;
   min-width: 160px;
+}
+
+/* Campos de búsqueda y filtros */
+.admin-comentarios :deep(.v-field) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.admin-comentarios :deep(.v-label) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* Mensaje cuando no hay resultados */
+.admin-comentarios :deep(.v-alert) {
+  color: rgb(var(--v-theme-on-surface));
+}
+
+/* Separadores */
+.admin-comentarios :deep(.v-divider) {
+  border-color: rgba(var(--v-theme-on-surface), 0.12);
 }
 
 @media (max-width: 600px) {
@@ -472,5 +497,15 @@ function colorEstado(estado) {
   .content-card {
     padding: 18px;
   }
+
+  .comment-card {
+    padding: 16px;
+  }
+
+  .status-select {
+    max-width: 100%;
+    width: 100%;
+  }
 }
+
 </style>

@@ -1,6 +1,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useTheme } from 'vuetify'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -22,6 +23,8 @@ ChartJS.register(
   LinearScale,
   ArcElement
 )
+
+const theme = useTheme()
 
 // Datos agregados de demostración.
 // No representan finanzas reales de los estudiantes.
@@ -96,56 +99,88 @@ const graficoCategorias = computed(() => ({
     {
       data: categorias.value.map(item => item.monto),
       backgroundColor: categorias.value.map(item => item.color),
-      borderWidth: 0,
+      borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
+      borderWidth: 2,
       hoverOffset: 8,
     },
   ],
 }))
 
-const opcionesBarras = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        usePointStyle: true,
-        padding: 20,
-      },
-    },
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        callback: value => '$' + value.toLocaleString(),
-      },
-      grid: {
-        color: '#f1f5f9',
-      },
-    },
-    x: {
-      grid: {
-        display: false,
-      },
-    },
-  },
-}
+// Opciones del gráfico de barras adaptadas al tema.
+const opcionesBarras = computed(() => {
+  const esOscuro = theme.current.value.dark
+  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+  const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
 
-const opcionesCategorias = {
-  responsive: true,
-  maintainAspectRatio: false,
-  cutout: '72%',
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        usePointStyle: true,
-        padding: 15,
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: colorTexto,
+          usePointStyle: true,
+          padding: 20,
+        },
+      },
+      tooltip: {
+        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+        titleColor: esOscuro ? '#F1F5F9' : '#111827',
+        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+        borderColor: colorCuadricula,
+        borderWidth: 1,
       },
     },
-  },
-}
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: colorTexto,
+          callback: value => '$' + value.toLocaleString(),
+        },
+        grid: {
+          color: colorCuadricula,
+        },
+      },
+      x: {
+        ticks: {
+          color: colorTexto,
+        },
+        grid: {
+          display: false,
+        },
+      },
+    },
+  }
+})
+
+// Opciones del gráfico circular adaptadas al tema.
+const opcionesCategorias = computed(() => {
+  const esOscuro = theme.current.value.dark
+  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '72%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: colorTexto,
+          usePointStyle: true,
+          padding: 15,
+        },
+      },
+      tooltip: {
+        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+        titleColor: esOscuro ? '#F1F5F9' : '#111827',
+        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+      },
+    },
+  }
+})
 
 function dinero(valor) {
   return new Intl.NumberFormat('es-SV', {
@@ -154,6 +189,7 @@ function dinero(valor) {
   }).format(valor)
 }
 </script>
+
 
 <template>
   <div class="finanzas-admin">
@@ -350,10 +386,12 @@ function dinero(valor) {
 </template>
 
 <style scoped>
+
 .finanzas-admin {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -368,20 +406,21 @@ function dinero(valor) {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 8px;
 }
 
 .stat-card,
 .chart-card,
 .table-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
 }
@@ -397,37 +436,37 @@ function dinero(valor) {
 }
 
 .blue {
-  background: #dbeafe;
+  background: rgba(var(--v-theme-primary), 0.14);
 }
 
 .purple {
-  background: #ede9fe;
+  background: rgba(124, 58, 237, 0.14);
 }
 
 .green {
-  background: #d1fae5;
+  background: rgba(var(--v-theme-success), 0.14);
 }
 
 .orange {
-  background: #fef3c7;
+  background: rgba(var(--v-theme-warning), 0.16);
 }
 
 .stat-card p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .stat-card h2 {
   font-size: 25px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   margin-top: 9px;
 }
 
 .stat-card span {
   display: block;
   font-size: 12px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 8px;
 }
 
@@ -441,12 +480,12 @@ function dinero(valor) {
 .section-heading h2 {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-heading p {
   font-size: 13px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
@@ -456,11 +495,37 @@ function dinero(valor) {
 }
 
 .positive {
-  color: #059669;
+  color: rgb(var(--v-theme-success));
 }
 
 .negative {
-  color: #dc2626;
+  color: rgb(var(--v-theme-error));
+}
+
+/* Tabla */
+.table-card :deep(.v-table) {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.table-card :deep(th) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.table-card :deep(td) {
+  color: rgb(var(--v-theme-on-surface));
+  white-space: nowrap;
+}
+
+.table-card :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+/* Alerta informativa */
+.finanzas-admin :deep(.v-alert) {
+  color: rgb(var(--v-theme-on-surface));
 }
 
 @media (max-width: 600px) {
@@ -482,4 +547,5 @@ function dinero(valor) {
     height: 270px;
   }
 }
+
 </style>

@@ -176,11 +176,21 @@ const money = (value) =>
 </template>
 
 <style scoped>
+
+/* =========================================
+   ESTRUCTURA GENERAL
+========================================= */
+
 .dashboard-content {
   max-width: 1450px;
   margin: auto;
   padding: 35px;
+  color: rgb(var(--v-theme-on-background));
 }
+
+/* =========================================
+   BIENVENIDA
+========================================= */
 
 .welcome-section {
   display: flex;
@@ -193,13 +203,13 @@ const money = (value) =>
 .welcome-section h1 {
   font-size: 29px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
   margin-top: 12px;
 }
 
 .welcome-section p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 8px;
 }
 
@@ -208,33 +218,39 @@ const money = (value) =>
   align-items: center;
   gap: 7px;
   padding: 7px 12px;
-  background: #e0e7ff;
-  color: #4338ca;
+  background: rgba(var(--v-theme-primary), 0.13);
+  color: rgb(var(--v-theme-primary));
   border-radius: 30px;
   font-size: 12px;
   font-weight: 700;
 }
+
+/* =========================================
+   TARJETAS FINANCIERAS
+========================================= */
 
 .finance-card {
   position: relative;
   padding: 25px;
   min-height: 180px;
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   transition: transform 0.25s, box-shadow 0.25s;
   overflow: hidden;
 }
 
 .finance-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px #0f172a12;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
 }
 
 .card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
   font-weight: 600;
 }
@@ -243,7 +259,7 @@ const money = (value) =>
   font-size: 32px;
   font-weight: 800;
   margin-top: 23px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   letter-spacing: -1px;
 }
 
@@ -253,11 +269,21 @@ const money = (value) =>
   gap: 7px;
   font-size: 12px;
   margin-top: 16px;
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
+/* =========================================
+   TARJETA DE SALDO
+   Conserva el degradado original
+========================================= */
+
 .balance-card {
-  background: linear-gradient(135deg, #2563eb, #4338ca, #7c3aed);
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #4338ca,
+    #7c3aed
+  );
   color: white;
   border: none;
 }
@@ -274,9 +300,13 @@ const money = (value) =>
   height: 180px;
   right: -70px;
   bottom: -100px;
-  border: 30px solid #ffffff15;
+  border: 30px solid rgba(255, 255, 255, 0.08);
   border-radius: 50%;
 }
+
+/* =========================================
+   ICONOS DE INGRESOS Y GASTOS
+========================================= */
 
 .stat-icon {
   width: 42px;
@@ -288,18 +318,24 @@ const money = (value) =>
 }
 
 .income-icon {
-  background: #dcfce7;
-  color: #16a34a;
+  background: rgba(var(--v-theme-success), 0.15);
+  color: rgb(var(--v-theme-success));
 }
 
 .expense-icon {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(var(--v-theme-error), 0.15);
+  color: rgb(var(--v-theme-error));
 }
+
+/* =========================================
+   TARJETA DE MOVIMIENTOS
+========================================= */
 
 .transactions-card {
   border-radius: 20px;
-  border: 1px solid #e9edf5;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   overflow: hidden;
 }
 
@@ -315,17 +351,47 @@ const money = (value) =>
 .section-header h3 {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .section-header p {
   font-size: 13px;
-  color: #94a3b8;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 5px;
 }
 
 .search-field {
   max-width: 260px;
+}
+
+/* =========================================
+   TABLA DE MOVIMIENTOS
+========================================= */
+
+.transactions-table {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.transactions-table :deep(table) {
+  background: transparent;
+}
+
+.transactions-table th {
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.transactions-table td {
+  padding-top: 13px !important;
+  padding-bottom: 13px !important;
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+.transactions-table :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-primary), 0.06);
 }
 
 .transaction-name {
@@ -335,20 +401,13 @@ const money = (value) =>
 }
 
 .transaction-name strong {
-  color: #334155;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 13px;
 }
 
-.transactions-table th {
-  font-size: 12px;
-  color: #94a3b8;
-  font-weight: 700;
-}
-
-.transactions-table td {
-  padding-top: 13px !important;
-  padding-bottom: 13px !important;
-}
+/* =========================================
+   RESPONSIVE
+========================================= */
 
 @media (max-width: 600px) {
   .dashboard-content {
@@ -365,12 +424,30 @@ const money = (value) =>
 
   .search-field {
     max-width: 100%;
+    width: 100%;
+  }
+
+  .section-header {
+    padding: 20px;
+  }
+
+  .transactions-card {
+    overflow-x: auto;
+  }
+
+  .transactions-table {
+    min-width: 600px;
   }
 }
+
+/* =========================================
+   MOVIMIENTO REDUCIDO
+========================================= */
 
 @media (prefers-reduced-motion: reduce) {
   .finance-card {
     transition: none;
   }
 }
+
 </style>

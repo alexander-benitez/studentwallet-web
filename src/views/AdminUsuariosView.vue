@@ -406,10 +406,12 @@ function iniciales(nombre) {
 </template>
 
 <style scoped>
+
 .usuarios-page {
   min-height: 100vh;
   padding: 32px;
-  background: #f6f8fc;
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -424,19 +426,20 @@ function iniciales(nombre) {
 .page-header h1 {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-background));
   letter-spacing: -1px;
 }
 
 .page-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 8px;
 }
 
 .stat-card,
 .content-card {
-  background: white;
-  border: 1px solid #e8edf5;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.10);
   border-radius: 18px;
   padding: 24px;
 }
@@ -452,24 +455,24 @@ function iniciales(nombre) {
 }
 
 .blue {
-  background: #dbeafe;
+  background: rgba(var(--v-theme-primary), 0.14);
 }
 
 .green {
-  background: #d1fae5;
+  background: rgba(var(--v-theme-success), 0.14);
 }
 
 .orange {
-  background: #fef3c7;
+  background: rgba(var(--v-theme-warning), 0.16);
 }
 
 .stat-card p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 14px;
 }
 
 .stat-card h2 {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 30px;
   font-weight: 800;
   margin-top: 8px;
@@ -483,13 +486,13 @@ function iniciales(nombre) {
 }
 
 .section-header h2 {
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 19px;
   font-weight: 800;
 }
 
 .section-header p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
   margin-top: 5px;
 }
@@ -507,11 +510,39 @@ function iniciales(nombre) {
 
 .user-cell strong {
   white-space: nowrap;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .avatar-text {
   color: #2563eb;
   font-weight: 800;
+}
+
+/* Tabla */
+.content-card :deep(.v-table) {
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.content-card :deep(th) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.content-card :deep(td) {
+  color: rgb(var(--v-theme-on-surface));
+  white-space: nowrap;
+}
+
+.content-card :deep(tbody tr:hover) {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+/* Diálogo de detalles */
+:deep(.v-dialog .v-card) {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .detail-avatar {
@@ -520,11 +551,11 @@ function iniciales(nombre) {
 
 .detail-avatar h3 {
   margin-top: 12px;
-  color: #0f172a;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .detail-avatar p {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-size: 13px;
 }
 
@@ -536,8 +567,12 @@ function iniciales(nombre) {
   font-size: 14px;
 }
 
+.detail-row strong {
+  color: rgb(var(--v-theme-on-surface));
+}
+
 .detail-row span {
-  color: #64748b;
+  color: rgb(var(--v-theme-on-surface-variant));
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -555,4 +590,5 @@ function iniciales(nombre) {
     padding: 16px;
   }
 }
+
 </style>

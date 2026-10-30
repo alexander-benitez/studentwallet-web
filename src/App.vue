@@ -21,14 +21,22 @@ const esAdministrador = computed(() =>
 
 <template>
   <v-app>
-    <router-view v-if="esPaginaPublica" />
+    <router-view v-slot="{ Component }">
+      <!-- PÁGINAS PÚBLICAS -->
+      <component
+        :is="Component"
+        v-if="esPaginaPublica"
+      />
 
-    <AdminLayout v-else-if="esAdministrador">
-      <router-view />
-    </AdminLayout>
+      <!-- PÁGINAS DE ADMINISTRADOR -->
+      <AdminLayout v-else-if="esAdministrador">
+        <component :is="Component" />
+      </AdminLayout>
 
-    <MainLayout v-else>
-      <router-view />
-    </MainLayout>
+      <!-- PÁGINAS DE USUARIO -->
+      <MainLayout v-else>
+        <component :is="Component" />
+      </MainLayout>
+    </router-view>
   </v-app>
 </template>
