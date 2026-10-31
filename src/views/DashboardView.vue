@@ -1,29 +1,38 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+import { ref, computed, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { useFinanzasStore } from "@/stores/finanzas"
 
 const router = useRouter()
 const finanzas = useFinanzasStore()
-const search = ref('')
+const search = ref("")
 
+// Disparar peticiones a la API de Laravel al entrar a la vista
+onMounted(async () => {
+  await Promise.all([
+    finanzas.cargarBalance(),
+    finanzas.cargarMovimientos(),
+    finanzas.cargarCategorias()
+  ])
+})
+
+// Mapeo reactivo compatible con el store y la API
 const transactions = computed(() => finanzas.movimientos)
-const income = computed(() => finanzas.ingresos)
-const expenses = computed(() => finanzas.gastos)
-const balance = computed(() => finanzas.saldo)
+const income = computed(() => finanzas.totalIngresos ?? finanzas.balanceData?.total_ingresos ?? 0)
+const expenses = computed(() => finanzas.totalGastos ?? finanzas.balanceData?.total_gastos ?? 0)
+const balance = computed(() => finanzas.saldoActual ?? finanzas.balanceData?.saldo_total ?? 0)
 
 const filteredTransactions = computed(() =>
-  transactions.value.filter((t) =>
-    `${t.name || ''} ${t.category || ''}`
-      .toLowerCase()
-      .includes(search.value.toLowerCase())
-  )
+  transactions.value.filter((t) => {
+    const texto = `${t.name || t.descripcion || t.description || ""} ${t.category?.name || t.category || ""}`
+    return texto.toLowerCase().includes(search.value.toLowerCase())
+  })
 )
 
 const money = (value) =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
+  new Intl.NumberFormat("es-SV", {
+    style: "currency",
+    currency: "USD",
   }).format(Number(value) || 0)
 </script>
 
