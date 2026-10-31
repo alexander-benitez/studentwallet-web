@@ -1,0 +1,149 @@
+
+/* =========================================
+   STUDENTWALLET - ESTILOS GLOBALES
+========================================= */
+
+/* =========================================
+   TEMA CLARO Y OSCURO
+========================================= */
+
+.v-theme--light {
+  color-scheme: light;
+}
+
+.v-theme--dark {
+  color-scheme: dark;
+}
+
+/* =========================================
+   TEXTO DE LOS CAMPOS
+========================================= */
+
+/* Texto que escribe el usuario */
+.v-theme--dark .v-field input,
+.v-theme--dark .v-field textarea,
+.v-theme--dark .v-field__input,
+.v-theme--dark .v-field__input input,
+.v-theme--dark .v-field__input textarea {
+  color: #F1F5F9 !important;
+  -webkit-text-fill-color: #F1F5F9 !important;
+  caret-color: #60A5FA !important;
+}
+
+.v-theme--light .v-field input,
+.v-theme--light .v-field textarea,
+.v-theme--light .v-field__input,
+.v-theme--light .v-field__input input,
+.v-theme--light .v-field__input textarea {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #2563EB !important;
+}
+
+/* =========================================
+   ETIQUETAS DE LOS CAMPOS
+========================================= */
+
+.v-theme--dark .v-field-label,
+.v-theme--dark .v-label {
+  color: #CBD5E1 !important;
+  opacity: 1 !important;
+}
+
+.v-theme--light .v-field-label,
+.v-theme--light .v-label {
+  color: #475569 !important;
+  opacity: 1 !important;
+}
+
+/* =========================================
+   PLACEHOLDERS
+========================================= */
+
+.v-theme--dark .v-field input::placeholder,
+.v-theme--dark .v-field textarea::placeholder {
+  color: #94A3B8 !important;
+  opacity: 1 !important;
+}
+
+.v-theme--light .v-field input::placeholder,
+.v-theme--light .v-field textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+/* =========================================
+   ICONOS DE LOS CAMPOS
+========================================= */
+
+.v-theme--dark .v-field .v-icon {
+  color: #CBD5E1 !important;
+}
+
+.v-theme--light .v-field .v-icon {
+  color: #64748B !important;
+}
+
+/* =========================================
+   BORDES
+========================================= */
+
+.v-theme--dark .v-field--variant-outlined .v-field__outline {
+  color: #64748B !important;
+}
+
+.v-theme--light .v-field--variant-outlined .v-field__outline {
+  color: #CBD5E1 !important;
+}
+
+/* Campo enfocado */
+.v-field--focused .v-field__outline {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+/* =========================================
+   MENSAJES DE VALIDACIÓN
+========================================= */
+
+.v-theme--dark .v-messages {
+  color: #CBD5E1 !important;
+}
+
+.v-theme--light .v-messages {
+  color: #64748B !important;
+}
+
+/* =========================================
+   MENÚS DESPLEGABLES
+========================================= */
+
+.v-theme--dark .v-overlay-container .v-list {
+  background: #111C2E !important;
+  color: #F1F5F9 !important;
+}
+
+.v-theme--dark .v-overlay-container .v-list-item-title {
+  color: #F1F5F9 !important;
+}
+
+.v-theme--light .v-overlay-container .v-list-item-title {
+  color: #111827 !important;
+}
+
+/* =========================================
+   AUTOCOMPLETADO
+========================================= */
+
+.v-theme--dark input:-webkit-autofill,
+.v-theme--dark input:-webkit-autofill:hover,
+.v-theme--dark input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F1F5F9 !important;
+  box-shadow: 0 0 0 1000px #111C2E inset !important;
+}
+
+.v-theme--light input:-webkit-autofill,
+.v-theme--light input:-webkit-autofill:hover,
+.v-theme--light input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111827 !important;
+  box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+}
