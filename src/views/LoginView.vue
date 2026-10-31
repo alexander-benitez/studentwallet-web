@@ -33,44 +33,59 @@ function mostrarMensaje(texto, tipo = 'error') {
   snackbar.value = true
 }
 
-// INICIO DE SESIÓN DEMOSTRATIVO
-
+// INICIO DE SESIÓN CONECTADO A LARAVEL SANCTUM
 async function login() {
   if (loading.value) return
 
   const resultado = await formulario.value?.validate()
 
   if (!resultado?.valid) {
-    mostrarMensaje('Revisa los campos señalados antes de continuar.')
+    mostrarMensaje("Revisa los campos señalados antes de continuar.")
     return
   }
 
   if (password.value.length < 6) {
-    mostrarMensaje('La contraseña debe tener al menos 6 caracteres.')
+    mostrarMensaje("La contraseña debe tener al menos 6 caracteres.")
     return
   }
 
   loading.value = true
 
   try {
-    // Simulación de procesamiento.
-    // Sustituiremos esto por una petición al backend.
-    await new Promise((resolve) => setTimeout(resolve, 900))
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
 
-    mostrarMensaje(
-      'Acceso de demostración. No se han verificado credenciales reales.',
-      'info'
-    )
+    const response = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        email: email.value.trim(),
+        password: password.value.trim()
+      })
+    })
 
-    const destino =
-  tipoAcceso.value === 'administrador'
-    ? '/admin'
-    : '/dashboard'
+    const res = await response.json()
 
-await router.push(destino)
-  } catch (error) {
-    console.error('Error al navegar:', error)
-    mostrarMensaje('No se pudo abrir el Dashboard.')
+    if (response.ok) {
+      const token = res.data?.token || res.token
+      const user = res.data?.user || res.user
+
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("user_info", JSON.stringify(user))
+
+      mostrarMensaje("¡Inicio de sesión exitoso! Redirigiendo...", "success")
+
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 700)
+    } else {
+      mostrarMensaje(res.message || "Credenciales incorrectas.", "error")
+    }
+  } catch (err) {
+    console.error("Error de red al conectar con backend:", err)
+    mostrarMensaje("No se pudo conectar con el servidor backend.", "error")
   } finally {
     loading.value = false
   }
