@@ -28,8 +28,8 @@ const minCaracteres = (v) =>
   'Escribe al menos 10 caracteres'
 
 const misComentarios = computed(() =>
-  finanzas.comentarios.filter(
-    (item) => item.usuario === finanzas.nombreCompleto
+  (finanzas?.comentarios || []).filter(
+    (item) => item.usuario === finanzas?.nombreCompleto
   )
 )
 
@@ -49,8 +49,8 @@ async function enviarComentario() {
   loading.value = true
 
   try {
-    finanzas.agregarComentario({
-      usuario: finanzas.nombreCompleto,
+    finanzas?.agregarComentario({
+      usuario: finanzas?.nombreCompleto,
       categoria: categoria.value,
       comentario: comentario.value.trim(),
       calificacion: calificacion.value,

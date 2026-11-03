@@ -2,44 +2,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 
-const usuariosIniciales = [
-  {
-    id: 1,
-    nombre: 'María López',
-    correo: 'maria@ejemplo.com',
-    universidad: 'Universidad de El Salvador',
-    rol: 'Estudiante',
-    estado: 'Activo',
-    fecha: '2026-09-12',
-  },
-  {
-    id: 2,
-    nombre: 'Carlos Pérez',
-    correo: 'carlos@ejemplo.com',
-    universidad: 'ITCA-FEPADE',
-    rol: 'Estudiante',
-    estado: 'Activo',
-    fecha: '2026-09-20',
-  },
-  {
-    id: 3,
-    nombre: 'Ana Martínez',
-    correo: 'ana@ejemplo.com',
-    universidad: 'Universidad Don Bosco',
-    rol: 'Estudiante',
-    estado: 'Inactivo',
-    fecha: '2026-10-01',
-  },
-  {
-    id: 4,
-    nombre: 'José Hernández',
-    correo: 'jose@ejemplo.com',
-    universidad: 'Universidad Tecnológica',
-    rol: 'Estudiante',
-    estado: 'Activo',
-    fecha: '2026-10-10',
-  },
-]
+const usuariosIniciales = []
 
 function cargarUsuarios() {
   try {
@@ -146,7 +109,7 @@ function iniciales(nombre) {
       </div>
 
       <v-chip color="info" variant="tonal">
-        Datos de demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 

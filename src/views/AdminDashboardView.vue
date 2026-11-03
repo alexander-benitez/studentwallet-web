@@ -1,30 +1,10 @@
-
 <script setup>
 import { ref } from 'vue'
 
-const usuarios = ref([
-  {
-    id: 1,
-    nombre: 'María López',
-    correo: 'maria@ejemplo.com',
-    estado: 'Activo',
-    rol: 'Estudiante',
-  },
-  {
-    id: 2,
-    nombre: 'Carlos Pérez',
-    correo: 'carlos@ejemplo.com',
-    estado: 'Activo',
-    rol: 'Estudiante',
-  },
-  {
-    id: 3,
-    nombre: 'Ana Martínez',
-    correo: 'ana@ejemplo.com',
-    estado: 'Inactivo',
-    rol: 'Estudiante',
-  },
-])
+
+const usuarios = ref([]);
+
+
 
 const estadisticas = [
   {
@@ -62,12 +42,7 @@ const estadisticas = [
   <div class="admin-dashboard">
     <div class="page-header">
       <div>
-        <v-chip
-          color="primary"
-          variant="tonal"
-          size="small"
-          class="mb-3"
-        >
+        <v-chip color="primary" variant="tonal" size="small" class="mb-3">
           Administración
         </v-chip>
 
@@ -79,23 +54,14 @@ const estadisticas = [
       </div>
 
       <v-chip color="info" variant="tonal">
-        Modo demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 
     <v-row class="mt-4">
-      <v-col
-        v-for="item in estadisticas"
-        :key="item.titulo"
-        cols="12"
-        sm="6"
-        lg="3"
-      >
+      <v-col v-for="item in estadisticas" :key="item.titulo" cols="12" sm="6" lg="3">
         <v-card class="stat-card" elevation="0">
-          <div
-            class="stat-icon"
-            :style="{ background: item.fondo }"
-          >
+          <div class="stat-icon" :style="{ background: item.fondo }">
             <v-icon :color="item.color" size="27">
               {{ item.icono }}
             </v-icon>
@@ -132,23 +98,15 @@ const estadisticas = [
             </thead>
 
             <tbody>
-              <tr
-                v-for="usuario in usuarios"
-                :key="usuario.id"
-              >
+              <tr v-for="usuario in usuarios" :key="usuario.id">
                 <td>{{ usuario.nombre }}</td>
                 <td>{{ usuario.correo }}</td>
                 <td>{{ usuario.rol }}</td>
                 <td>
-                  <v-chip
-                    size="small"
-                    :color="
-                      usuario.estado === 'Activo'
-                        ? 'success'
-                        : 'warning'
-                    "
-                    variant="tonal"
-                  >
+                  <v-chip size="small" :color="usuario.estado === 'Activo'
+                      ? 'success'
+                      : 'warning'
+                    " variant="tonal">
                     {{ usuario.estado }}
                   </v-chip>
                 </td>
@@ -195,12 +153,7 @@ const estadisticas = [
             Gestión real de usuarios
           </div>
 
-          <v-alert
-            type="info"
-            variant="tonal"
-            density="comfortable"
-            class="mt-5"
-          >
+          <v-alert type="info" variant="tonal" density="comfortable" class="mt-5">
             Los datos administrativos son
             demostrativos.
           </v-alert>
@@ -211,7 +164,6 @@ const estadisticas = [
 </template>
 
 <style scoped>
-
 .admin-dashboard {
   padding: 32px;
   min-height: 100vh;
@@ -337,5 +289,4 @@ const estadisticas = [
     overflow-x: auto;
   }
 }
-
 </style>

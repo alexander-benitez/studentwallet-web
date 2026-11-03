@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, watch } from 'vue'
 
@@ -105,7 +104,7 @@ function restablecerConfiguracion() {
       </div>
 
       <v-chip color="info" variant="tonal">
-        Modo demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 
@@ -174,7 +173,7 @@ function restablecerConfiguracion() {
 
               <div>
                 <h2>Funciones de la plataforma</h2>
-                <p>Preferencias administrativas de demostración</p>
+                <p>Preferencias administrativas en integración</p>
               </div>
             </div>
 

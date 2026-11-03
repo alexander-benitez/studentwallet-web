@@ -47,10 +47,10 @@ const dinero = valor =>
 
 // GRÁFICO: INGRESOS VS GASTOS
 const datosBarras = computed(() => {
-  const ingresos = Array(12).fill(0)
-  const gastos = Array(12).fill(0)
+  const ingresos = Array(12).fill(0);
+  const gastos = Array(12).fill(0);
 
-  finanzas.movimientos.forEach(m => {
+  (finanzas?.movimientos || []).forEach(m => {
     if (!m.date) return
 
     const partes = m.date.split('-')
@@ -92,9 +92,9 @@ const datosBarras = computed(() => {
 
 // GRÁFICO: GASTOS POR CATEGORÍA
 const datosCategorias = computed(() => {
-  const totales = {}
+  const totales = {};
 
-  finanzas.movimientos.forEach(m => {
+  (finanzas?.movimientos || []).forEach(m => {
     if (
       m.type !== 'expense' ||
       !m.date?.startsWith(String(anioSeleccionado.value))
@@ -107,6 +107,8 @@ const datosCategorias = computed(() => {
 
     totales[categoria] = (totales[categoria] || 0) + monto
   })
+
+  if (Object.keys(totales).length === 0) return {}
 
   return {
     labels: Object.keys(totales),
@@ -229,7 +231,7 @@ const opcionesCategorias = computed(() => {
 
 // COMPROBAR SI EXISTEN GASTOS
 const hayGastos = computed(() =>
-  datosCategorias.value.datasets[0].data.some(valor => valor > 0)
+  datosCategorias.value.datasets?.[0]?.data?.some(valor => valor > 0) ?? false
 )
 </script>
 
@@ -264,7 +266,7 @@ const hayGastos = computed(() =>
           <p>Total de ingresos</p>
 
           <h2 class="text-success">
-            {{ dinero(finanzas.ingresos) }}
+            {{ dinero(finanzas?.ingresos) }}
           </h2>
         </v-card>
       </v-col>
@@ -278,7 +280,7 @@ const hayGastos = computed(() =>
           <p>Total de gastos</p>
 
           <h2 class="text-error">
-            {{ dinero(finanzas.gastos) }}
+            {{ dinero(finanzas?.gastos) }}
           </h2>
         </v-card>
       </v-col>
@@ -292,7 +294,7 @@ const hayGastos = computed(() =>
           <p>Balance disponible</p>
 
           <h2>
-            {{ dinero(finanzas.saldo) }}
+            {{ dinero(finanzas?.saldo) }}
           </h2>
         </v-card>
       </v-col>

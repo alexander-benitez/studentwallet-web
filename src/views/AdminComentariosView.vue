@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, computed } from 'vue'
 import { useFinanzasStore } from '@/stores/finanzas'
@@ -25,7 +24,7 @@ const categorias = [
 ]
 
 const comentariosFiltrados = computed(() => {
-  return finanzas.comentarios.filter((item) => {
+  return  (finanzas?.comentarios || []).filter((item) => {
     const texto = busqueda.value.toLowerCase().trim()
 
     const coincideBusqueda =
@@ -48,28 +47,28 @@ const comentariosFiltrados = computed(() => {
   })
 })
 
-const total = computed(() => finanzas.comentarios.length)
+const total = computed(() => finanzas?.comentarios?.length || 0)
 
 const pendientes = computed(() =>
-  finanzas.comentarios.filter(
+   (finanzas?.comentarios || []).filter(
     (item) => item.estado === 'Pendiente'
   ).length
 )
 
 const enRevision = computed(() =>
-  finanzas.comentarios.filter(
+   (finanzas?.comentarios || []).filter(
     (item) => item.estado === 'En revisión'
   ).length
 )
 
 const resueltos = computed(() =>
-  finanzas.comentarios.filter(
+   (finanzas?.comentarios || []).filter(
     (item) => item.estado === 'Resuelto'
   ).length
 )
 
 function cambiarEstado(id, nuevoEstado) {
-  finanzas.actualizarEstadoComentario(id, nuevoEstado)
+  finanzas?.actualizarEstadoComentario(id, nuevoEstado)
 
   mensaje.value = 'Estado actualizado correctamente.'
   snackbar.value = true
@@ -99,7 +98,7 @@ function colorEstado(estado) {
       </div>
 
       <v-chip color="info" variant="tonal">
-        Modo demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 
@@ -160,7 +159,7 @@ function colorEstado(estado) {
         <div>
           <h2>Bandeja de comentarios</h2>
           <p>
-            {{ comentariosFiltrados.length }}
+            {{ comentariosFiltrados?.length || 0 }}
             comentarios encontrados
           </p>
         </div>
@@ -210,7 +209,7 @@ function colorEstado(estado) {
       </v-row>
 
       <v-alert
-        v-if="comentariosFiltrados.length === 0"
+        v-if="comentariosFiltrados?.length === 0"
         type="info"
         variant="tonal"
       >

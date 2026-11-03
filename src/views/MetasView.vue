@@ -50,7 +50,7 @@ const montoValido = v =>
   'Ingresa una cantidad mayor que cero'
 
 const metas = computed(() =>
-  finanzas.metas.map(meta => ({
+  (finanzas?.metas || []).map(meta => ({
     ...meta,
     porcentaje: meta.target > 0
       ? Math.min((meta.saved / meta.target) * 100, 100)
@@ -86,7 +86,7 @@ async function guardarMeta() {
   const resultado = await formMeta.value.validate()
   if (!resultado.valid) return
 
-  const guardada = finanzas.agregarMeta({
+  const guardada = finanzas?.agregarMeta({
     name: nombre.value.trim(),
     target: Number(objetivo.value),
     deadline: fechaLimite.value,
@@ -112,7 +112,7 @@ async function guardarAhorro() {
   const resultado = await formAhorro.value.validate()
   if (!resultado.valid || !metaSeleccionada.value) return
 
-  const guardado = finanzas.agregarAhorro(
+  const guardado = finanzas?.agregarAhorro(
     metaSeleccionada.value.id,
     Number(cantidadAhorro.value)
   )
@@ -137,7 +137,7 @@ function confirmarEliminar(meta) {
 function eliminarMeta() {
   if (!metaSeleccionada.value) return
 
-  finanzas.eliminarMeta(metaSeleccionada.value.id)
+  finanzas?.eliminarMeta(metaSeleccionada.value.id)
   dialogEliminar.value = false
   metaSeleccionada.value = null
   notificar('Meta eliminada correctamente')
@@ -195,7 +195,7 @@ function formatearFecha(fecha) {
             <span>Total ahorrado</span>
             <v-icon>mdi-piggy-bank-outline</v-icon>
           </div>
-          <h2>{{ dinero(finanzas.totalAhorrado) }}</h2>
+          <h2>{{ dinero(finanzas?.totalAhorrado) }}</h2>
           <p>Acumulado en todas tus metas</p>
         </v-card>
       </v-col>

@@ -8,7 +8,7 @@ const router = useRouter()
 const finanzas = useFinanzasStore()
 
 const categoriasIngresos = computed(() =>
-  finanzas.categorias
+  (finanzas?.categorias || [])
     .filter(categoria => categoria.tipo === 'income')
     .map(categoria => ({
       title: categoria.nombre,
@@ -30,7 +30,7 @@ const guardando = ref(false)
 const busqueda = ref('')
 
 const ingresos = computed(() =>
-  finanzas.movimientos
+  (finanzas?.movimientos || [])
     .filter(m => m.type === 'income')
     .filter(m =>
       `${m.name} ${m.category}`
@@ -39,7 +39,7 @@ const ingresos = computed(() =>
     )
 )
 
-const totalIngresos = computed(() => finanzas.ingresos)
+const totalIngresos = computed(() => finanzas?.ingresos)
 
 const formatoDinero = valor =>
   new Intl.NumberFormat('es-SV', {
@@ -70,7 +70,7 @@ async function guardarIngreso() {
 
   guardando.value = true
 
-  finanzas.agregarMovimiento({
+  finanzas?.agregarMovimiento({
     name: concepto.value.trim(),
     category: categoria.value,
     amount: Number(monto.value),
