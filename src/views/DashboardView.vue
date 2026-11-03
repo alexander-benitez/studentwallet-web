@@ -10,17 +10,17 @@ const search = ref("")
 // Disparar peticiones a la API de Laravel al entrar a la vista
 onMounted(async () => {
   await Promise.all([
-    finanzas.cargarBalance(),
-    finanzas.cargarMovimientos(),
-    finanzas.cargarCategorias()
+    finanzas?.cargarBalance(),
+    finanzas?.cargarMovimientos(),
+    finanzas?.cargarCategorias()
   ])
 })
 
 // Mapeo reactivo compatible con el store y la API
-const transactions = computed(() => finanzas.movimientos)
-const income = computed(() => finanzas.totalIngresos ?? finanzas.balanceData?.total_ingresos ?? 0)
-const expenses = computed(() => finanzas.totalGastos ?? finanzas.balanceData?.total_gastos ?? 0)
-const balance = computed(() => finanzas.saldoActual ?? finanzas.balanceData?.saldo_total ?? 0)
+const transactions = computed(() => finanzas?.movimientos || [])
+const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_ingresos ?? 0)
+const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_gastos ?? 0)
+const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.saldo_total ?? 0)
 
 const filteredTransactions = computed(() =>
   transactions.value.filter((t) => {
@@ -45,7 +45,7 @@ const money = (value) =>
           <v-icon size="16">mdi-sparkles</v-icon>
           Tu espacio financiero
         </div>
-        <h1>¡Hola, {{ finanzas.nombreCompleto }}! 👋</h1>
+        <h1>¡Hola, {{ finanzas?.nombreCompleto }}! 👋</h1>
         <p>
           Aquí tienes un resumen de tus finanzas.
           Sigue avanzando hacia tus metas.

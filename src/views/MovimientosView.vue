@@ -23,14 +23,14 @@ const tipos = [
 const categorias = computed(() => [
   'Todas',
   ...new Set(
-    finanzas.movimientos
+    (finanzas?.movimientos || [])
       .map(m => m.category)
       .filter(Boolean)
   ),
 ])
 
 const movimientosFiltrados = computed(() => {
-  return finanzas.movimientos
+  return (finanzas?.movimientos || [])
     .filter(m => {
       const texto = `${m.name} ${m.category}`.toLowerCase()
 
@@ -67,7 +67,7 @@ function confirmarEliminar(movimiento) {
 function eliminar() {
   if (!movimientoSeleccionado.value) return
 
-  finanzas.eliminarMovimiento(
+  finanzas?.eliminarMovimiento(
     movimientoSeleccionado.value.id
   )
 
@@ -117,7 +117,7 @@ function eliminar() {
             <v-icon>mdi-wallet-outline</v-icon>
           </div>
 
-          <h2>{{ dinero(finanzas.saldo) }}</h2>
+          <h2>{{ dinero(finanzas?.saldo) }}</h2>
           <p>Balance de tus movimientos</p>
         </v-card>
       </v-col>
@@ -130,7 +130,7 @@ function eliminar() {
           </div>
 
           <h2 class="text-success">
-            {{ dinero(finanzas.ingresos) }}
+            {{ dinero(finanzas?.ingresos) }}
           </h2>
 
           <p>Dinero recibido</p>
@@ -145,7 +145,7 @@ function eliminar() {
           </div>
 
           <h2 class="text-error">
-            {{ dinero(finanzas.gastos) }}
+            {{ dinero(finanzas?.gastos) }}
           </h2>
 
           <p>Dinero utilizado</p>
@@ -166,7 +166,7 @@ function eliminar() {
 
         <v-chip color="primary" variant="tonal">
           <v-icon start>mdi-swap-horizontal</v-icon>
-          {{ finanzas.movimientos.length }} registrados
+          {{ (finanzas?.movimientos || []).length }} registrados
         </v-chip>
       </div>
 
