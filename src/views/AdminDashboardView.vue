@@ -1,41 +1,71 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
+const usuarios = ref([])
+const cargando = ref(false)
 
-const usuarios = ref([]);
+async function cargarUsuarios() {
+  cargando.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
+    const response = await fetch(`${API_BASE}/admin/users`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
 
+    const res = await response.json()
+    if (response.ok && res.data) {
+      usuarios.value = res.data
+    }
+  } catch (error) {
+    console.error('Error al cargar usuarios:', error)
+  } finally {
+    cargando.value = false
+  }
+}
 
-const estadisticas = [
+onMounted(() => {
+  cargarUsuarios()
+})
+
+const totalUsuarios = computed(() => usuarios.value.length)
+const usuariosActivos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
+const usuariosInactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
+
+const estadisticas = computed(() => [
   {
     titulo: 'Usuarios registrados',
-    valor: '128',
+    valor: totalUsuarios.value,
     icono: 'mdi-account-group-outline',
     color: '#2563EB',
     fondo: '#DBEAFE',
   },
   {
     titulo: 'Usuarios activos',
-    valor: '96',
+    valor: usuariosActivos.value,
     icono: 'mdi-account-check-outline',
     color: '#10B981',
     fondo: '#D1FAE5',
   },
   {
-    titulo: 'Movimientos',
-    valor: '1,452',
+    titulo: 'Usuarios inactivos',
+    valor: usuariosInactivos.value,
+    icono: 'mdi-account-off-outline',
+    color: '#F59E0B',
+    fondo: '#FEF3C7',
+  },
+  {
+    titulo: 'Total de movimientos',
+    valor: '—',
     icono: 'mdi-swap-horizontal',
     color: '#7C3AED',
     fondo: '#EDE9FE',
   },
-  {
-    titulo: 'Cuentas bloqueadas',
-    valor: '3',
-    icono: 'mdi-shield-alert-outline',
-    color: '#F59E0B',
-    fondo: '#FEF3C7',
-  },
-]
+])
 </script>
 
 <template>
@@ -98,16 +128,18 @@ const estadisticas = [
             </thead>
 
             <tbody>
+              <tr v-if="usuarios.length === 0">
+                <td colspan="4" class="text-center py-4">
+                  {{ cargando ? 'Cargando usuarios...' : 'No hay usuarios registrados.' }}
+                </td>
+              </tr>
               <tr v-for="usuario in usuarios" :key="usuario.id">
-                <td>{{ usuario.nombre }}</td>
-                <td>{{ usuario.correo }}</td>
+                <td>{{ usuario.name }}</td>
+                <td>{{ usuario.email }}</td>
                 <td>{{ usuario.rol }}</td>
                 <td>
-                  <v-chip size="small" :color="usuario.estado === 'Activo'
-                      ? 'success'
-                      : 'warning'
-                    " variant="tonal">
-                    {{ usuario.estado }}
+                  <v-chip size="small" :color="usuario.is_active === 1 ? 'success' : 'warning'" variant="tonal">
+                    {{ usuario.is_active === 1 ? 'Activo' : 'Inactivo' }}
                   </v-chip>
                 </td>
               </tr>
@@ -126,36 +158,27 @@ const estadisticas = [
           </div>
 
           <div class="system-item">
-            <v-icon color="success">
-              mdi-check-circle
-            </v-icon>
+            <v-icon color="success">mdi-check-circle</v-icon>
             Dashboard estudiantil
           </div>
 
           <div class="system-item">
-            <v-icon color="success">
-              mdi-check-circle
-            </v-icon>
+            <v-icon color="success">mdi-check-circle</v-icon>
             Registro e inicio de sesión
           </div>
 
           <div class="system-item">
-            <v-icon color="warning">
-              mdi-clock-outline
-            </v-icon>
+            <v-icon color="success">mdi-check-circle</v-icon>
             Autenticación con backend
           </div>
 
           <div class="system-item">
-            <v-icon color="warning">
-              mdi-clock-outline
-            </v-icon>
+            <v-icon color="success">mdi-check-circle</v-icon>
             Gestión real de usuarios
           </div>
 
           <v-alert type="info" variant="tonal" density="comfortable" class="mt-5">
-            Los datos administrativos son
-            demostrativos.
+            Los datos mostrados son reales y provienen de la base de datos.
           </v-alert>
         </v-card>
       </v-col>
@@ -251,7 +274,6 @@ const estadisticas = [
   color: rgb(var(--v-theme-on-surface));
 }
 
-/* Tabla */
 .content-card :deep(.v-table) {
   background: transparent;
   color: rgb(var(--v-theme-on-surface));

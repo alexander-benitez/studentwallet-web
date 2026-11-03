@@ -1,22 +1,8 @@
-
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-const usuariosIniciales = []
-
-function cargarUsuarios() {
-  try {
-    const datos = localStorage.getItem('studentwallet_admin_usuarios')
-    if (!datos) return usuariosIniciales
-
-    const resultado = JSON.parse(datos)
-    return Array.isArray(resultado) ? resultado : usuariosIniciales
-  } catch {
-    return usuariosIniciales
-  }
-}
-
-const usuarios = ref(cargarUsuarios())
+const usuarios = ref([])
+const cargando = ref(false)
 
 const busqueda = ref('')
 const filtroEstado = ref('Todos')
@@ -28,63 +14,93 @@ const usuarioSeleccionado = ref(null)
 const snackbar = ref(false)
 const mensaje = ref('')
 
+async function cargarUsuarios() {
+  cargando.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+    const response = await fetch(`${API_BASE}/admin/users`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    const res = await response.json()
+    if (response.ok && res.data) {
+      usuarios.value = res.data
+    }
+  } catch (error) {
+    console.error('Error al cargar usuarios:', error)
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => {
+  cargarUsuarios()
+})
+
 const totalUsuarios = computed(() => usuarios.value.length)
-
-const activos = computed(() =>
-  usuarios.value.filter(u => u.estado === 'Activo').length
-)
-
-const inactivos = computed(() =>
-  usuarios.value.filter(u => u.estado === 'Inactivo').length
-)
+const activos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
+const inactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
 
 const usuariosFiltrados = computed(() => {
   const texto = String(busqueda.value || '').toLowerCase().trim()
 
   return usuarios.value.filter(usuario => {
     const coincideBusqueda =
-      usuario.nombre.toLowerCase().includes(texto) ||
-      usuario.correo.toLowerCase().includes(texto)
+      (usuario.name || '').toLowerCase().includes(texto) ||
+      (usuario.email || '').toLowerCase().includes(texto)
 
     const coincideEstado =
       filtroEstado.value === 'Todos' ||
-      usuario.estado === filtroEstado.value
+      (filtroEstado.value === 'Activo' && usuario.is_active === 1) ||
+      (filtroEstado.value === 'Inactivo' && usuario.is_active === 0)
 
     const coincideRol =
       filtroRol.value === 'Todos' ||
-      usuario.rol === filtroRol.value
+      (filtroRol.value === 'Estudiante' && usuario.rol === 'estudiante') ||
+      (filtroRol.value === 'Administrador' && usuario.rol === 'administrador')
 
     return coincideBusqueda && coincideEstado && coincideRol
   })
 })
-
-watch(
-  usuarios,
-  nuevos => {
-    localStorage.setItem(
-      'studentwallet_admin_usuarios',
-      JSON.stringify(nuevos)
-    )
-  },
-  { deep: true }
-)
 
 function verUsuario(usuario) {
   usuarioSeleccionado.value = usuario
   dialogo.value = true
 }
 
-function cambiarEstado(usuario) {
-  usuario.estado =
-    usuario.estado === 'Activo' ? 'Inactivo' : 'Activo'
+async function cambiarEstado(usuario) {
+  const nuevoEstado = usuario.is_active === 1 ? 0 : 1
+  try {
+    const token = localStorage.getItem('auth_token')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-  mensaje.value =
-    `La cuenta de ${usuario.nombre} ahora está ${usuario.estado.toLowerCase()}.`
+    const response = await fetch(`${API_BASE}/admin/users/${usuario.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ is_active: nuevoEstado })
+    })
 
-  snackbar.value = true
+    if (response.ok) {
+      usuario.is_active = nuevoEstado
+      mensaje.value = `La cuenta de ${usuario.name} ahora está ${nuevoEstado === 1 ? 'activa' : 'inactiva'}.`
+      snackbar.value = true
+    }
+  } catch (error) {
+    console.error('Error al cambiar estado:', error)
+  }
 }
 
 function iniciales(nombre) {
+  if (!nombre) return ''
   return nombre
     .split(' ')
     .map(palabra => palabra.charAt(0))
@@ -108,8 +124,8 @@ function iniciales(nombre) {
         </p>
       </div>
 
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
+      <v-chip color="success" variant="tonal">
+        Conectado a la API real
       </v-chip>
     </div>
 
@@ -205,7 +221,7 @@ function iniciales(nombre) {
       </v-row>
 
       <v-alert
-        v-if="usuariosFiltrados.length === 0"
+        v-if="usuariosFiltrados.length === 0 && !cargando"
         type="info"
         variant="tonal"
       >
@@ -233,28 +249,24 @@ function iniciales(nombre) {
                 <div class="user-cell">
                   <v-avatar color="#DBEAFE" size="38">
                     <span class="avatar-text">
-                      {{ iniciales(usuario.nombre) }}
+                      {{ iniciales(usuario.name) }}
                     </span>
                   </v-avatar>
 
-                  <strong>{{ usuario.nombre }}</strong>
+                  <strong>{{ usuario.name }}</strong>
                 </div>
               </td>
 
-              <td>{{ usuario.correo }}</td>
+              <td>{{ usuario.email }}</td>
               <td>{{ usuario.rol }}</td>
 
               <td>
                 <v-chip
                   size="small"
                   variant="tonal"
-                  :color="
-                    usuario.estado === 'Activo'
-                      ? 'success'
-                      : 'warning'
-                  "
+                  :color="usuario.is_active === 1 ? 'success' : 'warning'"
                 >
-                  {{ usuario.estado }}
+                  {{ usuario.is_active === 1 ? 'Activo' : 'Inactivo' }}
                 </v-chip>
               </td>
 
@@ -269,17 +281,9 @@ function iniciales(nombre) {
                   />
 
                   <v-btn
-                    :icon="
-                      usuario.estado === 'Activo'
-                        ? 'mdi-account-off-outline'
-                        : 'mdi-account-check-outline'
-                    "
+                    :icon="usuario.is_active === 1 ? 'mdi-account-off-outline' : 'mdi-account-check-outline'"
                     variant="text"
-                    :color="
-                      usuario.estado === 'Activo'
-                        ? 'warning'
-                        : 'success'
-                    "
+                    :color="usuario.is_active === 1 ? 'warning' : 'success'"
                     size="small"
                     @click="cambiarEstado(usuario)"
                   />
@@ -302,11 +306,11 @@ function iniciales(nombre) {
           <div class="detail-avatar">
             <v-avatar color="#DBEAFE" size="70">
               <span class="avatar-text">
-                {{ iniciales(usuarioSeleccionado.nombre) }}
+                {{ iniciales(usuarioSeleccionado.name) }}
               </span>
             </v-avatar>
 
-            <h3>{{ usuarioSeleccionado.nombre }}</h3>
+            <h3>{{ usuarioSeleccionado.name }}</h3>
             <p>{{ usuarioSeleccionado.rol }}</p>
           </div>
 
@@ -314,31 +318,22 @@ function iniciales(nombre) {
 
           <div class="detail-row">
             <strong>Correo:</strong>
-            <span>{{ usuarioSeleccionado.correo }}</span>
+            <span>{{ usuarioSeleccionado.email }}</span>
           </div>
 
           <div class="detail-row">
-            <strong>Universidad:</strong>
-            <span>{{ usuarioSeleccionado.universidad }}</span>
-          </div>
-
-          <div class="detail-row">
-            <strong>Registro:</strong>
-            <span>{{ usuarioSeleccionado.fecha }}</span>
+            <strong>Rol:</strong>
+            <span>{{ usuarioSeleccionado.rol }}</span>
           </div>
 
           <div class="detail-row">
             <strong>Estado:</strong>
             <v-chip
               size="small"
-              :color="
-                usuarioSeleccionado.estado === 'Activo'
-                  ? 'success'
-                  : 'warning'
-              "
+              :color="usuarioSeleccionado.is_active === 1 ? 'success' : 'warning'"
               variant="tonal"
             >
-              {{ usuarioSeleccionado.estado }}
+              {{ usuarioSeleccionado.is_active === 1 ? 'Activo' : 'Inactivo' }}
             </v-chip>
           </div>
         </v-card-text>
@@ -369,7 +364,6 @@ function iniciales(nombre) {
 </template>
 
 <style scoped>
-
 .usuarios-page {
   min-height: 100vh;
   padding: 32px;
@@ -481,7 +475,6 @@ function iniciales(nombre) {
   font-weight: 800;
 }
 
-/* Tabla */
 .content-card :deep(.v-table) {
   background: transparent;
   color: rgb(var(--v-theme-on-surface));
@@ -502,7 +495,6 @@ function iniciales(nombre) {
   background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
-/* Diálogo de detalles */
 :deep(.v-dialog .v-card) {
   background: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
@@ -553,5 +545,4 @@ function iniciales(nombre) {
     padding: 16px;
   }
 }
-
 </style>
