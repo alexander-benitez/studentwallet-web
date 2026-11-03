@@ -1,5 +1,3 @@
-
-
 <script setup>
 import { ref, computed } from 'vue'
 
@@ -52,27 +50,52 @@ function avisar(texto, tipo = 'error') {
   message.value = texto
   alertColor.value = tipo
   snackbar.value = true
-}
-
+} 
 async function register() {
   if (loading.value) return
   const result = await form.value?.validate()
   if (!result?.valid) {
-    avisar('Revisa los campos señalados antes de continuar.')
+    avisar("Revisa los campos señalados antes de continuar.")
     return
   }
   loading.value = true
   try {
-    // Demostración visual: todavía no se envían datos a un backend.
-    await new Promise((resolve) => setTimeout(resolve, 900))
-    avisar('Formulario validado. El registro real estará disponible al conectar el backend.', 'info')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+    const response = await fetch(`${API_BASE}/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        name: name.value.trim(),
+        email: email.value.trim(),
+        password: password.value.trim()
+      })
+    })
+    const res = await response.json()
+    if (response.ok) {
+      const token = res.data?.token
+      const user = res.data?.user
+      if (token) {
+        localStorage.setItem("auth_token", token)
+        localStorage.setItem("user_info", JSON.stringify(user))
+        avisar("¡Cuenta creada exitosamente! Redirigiendo...", "success")
+        setTimeout(() => {
+          window.location.href = "/dashboard"
+        }, 1000)
+      }
+    } else {
+      avisar(res.message || "Error al crear la cuenta. Intenta de nuevo.", "error")
+    }
   } catch (error) {
     console.error(error)
-    avisar('Ocurrió un problema al procesar el formulario.')
+    avisar("No se pudo conectar con el servidor backend.", "error")
   } finally {
     loading.value = false
   }
 }
+
 </script>
 
 
@@ -103,15 +126,7 @@ async function register() {
 
           <div class="hero">
 
-            <v-chip
-
-              variant="outlined"
-
-              color="white"
-
-              class="mb-6"
-
-            >
+            <v-chip variant="outlined" color="white" class="mb-6">
 
               Empieza a construir tu futuro
 
@@ -245,85 +260,27 @@ async function register() {
 
             <label>Nombre completo</label>
 
-            <v-text-field
-
-              v-model="name"
-                autocomplete="name"
-                :disabled="loading"
-
-              placeholder="Tu nombre completo"
-
-              prepend-inner-icon="mdi-account-outline"
-
-              variant="outlined"
-
-              rounded="lg"
-
-              :rules="[required]"
-
-              class="mt-2 mb-2"
-
-            />
+            <v-text-field v-model="name" autocomplete="name" :disabled="loading" placeholder="Tu nombre completo"
+              prepend-inner-icon="mdi-account-outline" variant="outlined" rounded="lg" :rules="[required]"
+              class="mt-2 mb-2" />
 
 
 
             <label>Correo electrónico</label>
 
-            <v-text-field
-
-              v-model="email"
-                autocomplete="email"
-                :disabled="loading"
-
-              type="email"
-
-              placeholder="ejemplo@correo.com"
-
-              prepend-inner-icon="mdi-email-outline"
-
-              variant="outlined"
-
-              rounded="lg"
-
-              :rules="[required, emailRule]"
-
-              class="mt-2 mb-2"
-
-            />
+            <v-text-field v-model="email" autocomplete="email" :disabled="loading" type="email"
+              placeholder="ejemplo@correo.com" prepend-inner-icon="mdi-email-outline" variant="outlined" rounded="lg"
+              :rules="[required, emailRule]" class="mt-2 mb-2" />
 
 
 
             <label>Contraseña</label>
 
-            <v-text-field
+            <v-text-field v-model="password" autocomplete="new-password" :disabled="loading"
+              :type="showPassword ? 'text' : 'password'" :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'
 
-              v-model="password"
-                autocomplete="new-password"
-                :disabled="loading"
-
-              :type="showPassword ? 'text' : 'password'"
-
-              :append-inner-icon="
-
-                showPassword ? 'mdi-eye-off' : 'mdi-eye'
-
-              "
-
-              prepend-inner-icon="mdi-lock-outline"
-
-              placeholder="Mínimo 8 caracteres"
-
-              variant="outlined"
-
-              rounded="lg"
-
-              :rules="[required, passwordRule]"
-
-              class="mt-2"
-
-              @click:append-inner="showPassword = !showPassword"
-
-            />
+                " prepend-inner-icon="mdi-lock-outline" placeholder="Mínimo 8 caracteres" variant="outlined" rounded="lg"
+              :rules="[required, passwordRule]" class="mt-2" @click:append-inner="showPassword = !showPassword" />
 
 
 
@@ -345,17 +302,7 @@ async function register() {
 
 
 
-              <v-progress-linear
-
-                :model-value="strength"
-
-                :color="strengthColor"
-
-                height="6"
-
-                rounded
-
-              />
+              <v-progress-linear :model-value="strength" :color="strengthColor" height="6" rounded />
 
             </div>
 
@@ -363,58 +310,17 @@ async function register() {
 
             <label>Confirmar contraseña</label>
 
-            <v-text-field
+            <v-text-field v-model="confirmPassword" autocomplete="new-password" :disabled="loading"
+              :type="showConfirm ? 'text' : 'password'" :append-inner-icon="showConfirm ? 'mdi-eye-off' : 'mdi-eye'
 
-              v-model="confirmPassword"
-                autocomplete="new-password"
-                :disabled="loading"
-
-              :type="showConfirm ? 'text' : 'password'"
-
-              :append-inner-icon="
-
-                showConfirm ? 'mdi-eye-off' : 'mdi-eye'
-
-              "
-
-              prepend-inner-icon="mdi-shield-lock-outline"
-
-              placeholder="Repite tu contraseña"
-
-              variant="outlined"
-
-              rounded="lg"
-
-              :rules="[required, confirmRule]"
-
-              class="mt-2 mb-4"
-
-              @click:append-inner="showConfirm = !showConfirm"
-
-            />
+                " prepend-inner-icon="mdi-shield-lock-outline" placeholder="Repite tu contraseña" variant="outlined"
+              rounded="lg" :rules="[required, confirmRule]" class="mt-2 mb-4"
+              @click:append-inner="showConfirm = !showConfirm" />
 
 
 
-            <v-btn
-
-              type="submit"
-
-              color="primary"
-
-              size="x-large"
-
-              rounded="lg"
-
-              block
-
-              :loading="loading"
-                :disabled="loading"
-
-              append-icon="mdi-arrow-right"
-
-              class="register-btn"
-
-            >
+            <v-btn type="submit" color="primary" size="x-large" rounded="lg" block :loading="loading"
+              :disabled="loading" append-icon="mdi-arrow-right" class="register-btn">
 
               Crear mi cuenta
 
@@ -460,19 +366,7 @@ async function register() {
 
     <!-- NOTIFICACIONES -->
 
-    <v-snackbar
-
-      v-model="snackbar"
-
-      :color="alertColor"
-
-      location="top right"
-
-      :timeout="3500"
-
-      rounded="lg"
-
-    >
+    <v-snackbar v-model="snackbar" :color="alertColor" location="top right" :timeout="3500" rounded="lg">
 
       {{ message }}
 
@@ -480,15 +374,7 @@ async function register() {
 
       <template #actions>
 
-        <v-btn
-
-          icon="mdi-close"
-
-          variant="text"
-
-          @click="snackbar = false"
-
-        />
+        <v-btn icon="mdi-close" variant="text" @click="snackbar = false" />
 
       </template>
 
@@ -501,7 +387,6 @@ async function register() {
 
 
 <style scoped>
-
 /* =========================================
    ESTRUCTURA GENERAL
 ========================================= */
@@ -524,12 +409,10 @@ async function register() {
 .brand-panel {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    145deg,
-    #1d4ed8,
-    #4338ca 58%,
-    #7c3aed
-  );
+  background: linear-gradient(145deg,
+      #1d4ed8,
+      #4338ca 58%,
+      #7c3aed);
   color: white;
   display: flex;
   align-items: center;
@@ -872,6 +755,7 @@ async function register() {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .hero,
   .register-card {
     animation: none;
