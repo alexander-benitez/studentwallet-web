@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
@@ -26,41 +26,88 @@ ChartJS.register(
 
 const theme = useTheme()
 
-// Datos en integración con API.
-// No representan finanzas reales de los estudiantes.
-const resumenMensual = ref([
-  { mes: 'Ene', ingresos: 3200, gastos: 2100 },
-  { mes: 'Feb', ingresos: 3900, gastos: 2500 },
-  { mes: 'Mar', ingresos: 3500, gastos: 2800 },
-  { mes: 'Abr', ingresos: 4600, gastos: 3100 },
-  { mes: 'May', ingresos: 4200, gastos: 2900 },
-  { mes: 'Jun', ingresos: 5100, gastos: 3400 },
-  { mes: 'Jul', ingresos: 4800, gastos: 3600 },
-  { mes: 'Ago', ingresos: 5600, gastos: 3800 },
-  { mes: 'Sep', ingresos: 5900, gastos: 4100 },
-  { mes: 'Oct', ingresos: 6200, gastos: 4300 },
-])
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const categorias = ref([
-  { nombre: 'Alimentación', monto: 12500, color: '#2563EB' },
-  { nombre: 'Transporte', monto: 8200, color: '#7C3AED' },
-  { nombre: 'Educación', monto: 6700, color: '#10B981' },
-  { nombre: 'Entretenimiento', monto: 4200, color: '#F59E0B' },
-  { nombre: 'Otros', monto: 3100, color: '#EF4444' },
-])
+const transacciones = ref([])
+const usuarios = ref([])
+const cargando = ref(false)
+
+const nombresMeses = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+]
+
+const coloresCategorias = [
+  '#2563EB', '#7C3AED', '#10B981', '#F59E0B', '#EF4444',
+  '#EC4899', '#06B6D4', '#64748B',
+]
+
+function esIngreso(transaccion) {
+  const tipo = String(transaccion?.type || '').toLowerCase()
+  return tipo === 'ingreso' || tipo === 'income'
+}
+
+function extraerLista(datos) {
+  if (Array.isArray(datos?.data)) return datos.data
+  if (Array.isArray(datos)) return datos
+  return []
+}
+
+const resumenMensual = computed(() => {
+  const meses = nombresMeses.map(mes => ({ mes, ingresos: 0, gastos: 0 }))
+
+  for (const transaccion of transacciones.value) {
+    const fecha = new Date(transaccion.date)
+    if (Number.isNaN(fecha.getTime())) continue
+
+    const monto = Number(transaccion.amount) || 0
+    const registro = meses[fecha.getMonth()]
+
+    if (esIngreso(transaccion)) {
+      registro.ingresos += monto
+    } else {
+      registro.gastos += monto
+    }
+  }
+
+  return meses.filter(mes => mes.ingresos > 0 || mes.gastos > 0)
+})
+
+const categorias = computed(() => {
+  const totales = {}
+
+  for (const transaccion of transacciones.value) {
+    if (esIngreso(transaccion)) continue
+
+    const nombre = transaccion.category?.name || transaccion.category?.nombre || 'Otros'
+    const monto = Number(transaccion.amount) || 0
+
+    totales[nombre] = (totales[nombre] || 0) + monto
+  }
+
+  return Object.entries(totales).map(([nombre, monto], indice) => ({
+    nombre,
+    monto,
+    color: coloresCategorias[indice % coloresCategorias.length],
+  }))
+})
 
 const totalIngresos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.ingresos,
-    0
-  )
+  transacciones.value
+    .filter(esIngreso)
+    .reduce(
+      (total, transaccion) => total + (Number(transaccion.amount) || 0),
+      0
+    )
 )
 
 const totalGastos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.gastos,
-    0
-  )
+  transacciones.value
+    .filter(transaccion => !esIngreso(transaccion))
+    .reduce(
+      (total, transaccion) => total + (Number(transaccion.amount) || 0),
+      0
+    )
 )
 
 const balance = computed(() =>
@@ -72,6 +119,8 @@ const porcentajeAhorro = computed(() =>
     ? (balance.value / totalIngresos.value) * 100
     : 0
 )
+
+const totalUsuarios = computed(() => usuarios.value.length)
 
 const graficoBarras = computed(() => ({
   labels: resumenMensual.value.map(item => item.mes),
@@ -180,6 +229,52 @@ const opcionesCategorias = computed(() => {
       },
     },
   }
+})
+
+async function cargarFinanzas() {
+  cargando.value = true
+
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers = {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    }
+
+    const [respuestaTransacciones, respuestaUsuarios] = await Promise.all([
+      fetch(`${API_BASE}/transactions`, { headers }),
+      fetch(`${API_BASE}/admin/users`, { headers }),
+    ])
+
+    if (respuestaTransacciones.ok) {
+      const datos = await respuestaTransacciones.json()
+      const lista = extraerLista(datos)
+
+      transacciones.value = lista.map(transaccion => ({
+        ...transaccion,
+        amount: Number(transaccion.amount) || 0,
+      }))
+    }
+
+    if (respuestaUsuarios.ok) {
+      const datos = await respuestaUsuarios.json()
+      usuarios.value = extraerLista(datos)
+    }
+  } catch (error) {
+    console.error('Error al cargar las finanzas:', error)
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => {
+  cargarFinanzas()
+})
+
+defineExpose({
+  cargarFinanzas,
+  totalUsuarios,
+  usuarios,
 })
 
 function dinero(valor) {
