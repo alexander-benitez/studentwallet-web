@@ -1,11 +1,11 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
 
 const router = useRouter()
-const finanzas = useFinanzasStore()
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
 
 const dialogMeta = ref(false)
 const dialogAhorro = ref(false)
@@ -25,6 +25,8 @@ const cantidadAhorro = ref(null)
 const snackbar = ref(false)
 const mensaje = ref('')
 const colorMensaje = ref('success')
+
+const goals = ref([])
 
 const iconos = [
   { title: 'Objetivo general', value: 'mdi-bullseye-arrow' },
@@ -49,16 +51,39 @@ const montoValido = v =>
   (Number.isFinite(Number(v)) && Number(v) > 0) ||
   'Ingresa una cantidad mayor que cero'
 
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+  }
+}
+
 const metas = computed(() =>
-  (finanzas?.metas || []).map(meta => ({
-    ...meta,
-    porcentaje: meta.target > 0
-      ? Math.min((meta.saved / meta.target) * 100, 100)
-      : 0,
-    restante: Math.max(meta.target - meta.saved, 0),
-    completada: meta.saved >= meta.target,
-  }))
+  goals.value.map(meta => {
+    const objetivoMeta = Number(meta.target_amount) || 0
+    const ahorrado = Number(meta.current_amount) || 0
+
+    return {
+      ...meta,
+      icon: meta.icon || 'mdi-bullseye-arrow',
+      target: objetivoMeta,
+      saved: ahorrado,
+      porcentaje: objetivoMeta > 0
+        ? Math.min((ahorrado / objetivoMeta) * 100, 100)
+        : 0,
+      restante: Math.max(objetivoMeta - ahorrado, 0),
+      completada: ahorrado >= objetivoMeta,
+    }
+  })
 )
+
+const finanzas = computed(() => ({
+  totalAhorrado: metas.value.reduce(
+    (total, m) => total + Number(m.saved || 0),
+    0
+  ),
+}))
 
 const metasCompletadas = computed(() =>
   metas.value.filter(m => m.completada).length
@@ -74,6 +99,60 @@ function notificar(texto, color = 'success') {
   snackbar.value = true
 }
 
+async function cargarMetas() {
+  try {
+    const respuesta = await fetch(`${API_BASE}/goals`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    })
+
+    if (!respuesta.ok) {
+      notificar('No se pudieron cargar tus metas', 'error')
+      return
+    }
+
+    const datos = await respuesta.json()
+    goals.value = datos.data || []
+  } catch (error) {
+    console.error('Error al cargar las metas:', error)
+    notificar('No se pudieron cargar tus metas', 'error')
+  }
+}
+
+async function crearMeta() {
+  const respuesta = await fetch(`${API_BASE}/goals`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      name: nombre.value.trim(),
+      target_amount: Number(objetivo.value),
+      deadline: fechaLimite.value || null,
+    }),
+  })
+
+  return respuesta.ok
+}
+
+async function agregarAporte() {
+  if (!metaSeleccionada.value) return false
+
+  const respuesta = await fetch(
+    `${API_BASE}/goals/${metaSeleccionada.value.id}/contributions`,
+    {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        amount: Number(cantidadAhorro.value),
+        note: null,
+      }),
+    }
+  )
+
+  return respuesta.ok
+}
+
 function abrirMeta() {
   nombre.value = ''
   objetivo.value = null
@@ -86,20 +165,19 @@ async function guardarMeta() {
   const resultado = await formMeta.value.validate()
   if (!resultado.valid) return
 
-  const guardada = finanzas?.agregarMeta({
-    name: nombre.value.trim(),
-    target: Number(objetivo.value),
-    deadline: fechaLimite.value,
-    icon: icono.value,
-  })
+  try {
+    if (!(await crearMeta())) {
+      notificar('No se pudo crear la meta', 'error')
+      return
+    }
 
-  if (!guardada) {
+    await cargarMetas()
+    dialogMeta.value = false
+    notificar('Meta de ahorro creada correctamente')
+  } catch (error) {
+    console.error('Error al crear la meta:', error)
     notificar('No se pudo crear la meta', 'error')
-    return
   }
-
-  dialogMeta.value = false
-  notificar('Meta de ahorro creada correctamente')
 }
 
 function abrirAhorro(meta) {
@@ -112,21 +190,19 @@ async function guardarAhorro() {
   const resultado = await formAhorro.value.validate()
   if (!resultado.valid || !metaSeleccionada.value) return
 
-  const guardado = finanzas?.agregarAhorro(
-    metaSeleccionada.value.id,
-    Number(cantidadAhorro.value)
-  )
+  try {
+    if (!(await agregarAporte())) {
+      notificar('No se pudo registrar el ahorro', 'error')
+      return
+    }
 
-  if (!guardado) {
-    notificar(
-      'El monto debe ser positivo y no superar lo que falta por ahorrar',
-      'error'
-    )
-    return
+    await cargarMetas()
+    dialogAhorro.value = false
+    notificar('Ahorro agregado correctamente')
+  } catch (error) {
+    console.error('Error al agregar el ahorro:', error)
+    notificar('No se pudo registrar el ahorro', 'error')
   }
-
-  dialogAhorro.value = false
-  notificar('Ahorro agregado correctamente')
 }
 
 function confirmarEliminar(meta) {
@@ -134,19 +210,34 @@ function confirmarEliminar(meta) {
   dialogEliminar.value = true
 }
 
-function eliminarMeta() {
+async function eliminarMeta() {
   if (!metaSeleccionada.value) return
 
-  finanzas?.eliminarMeta(metaSeleccionada.value.id)
-  dialogEliminar.value = false
-  metaSeleccionada.value = null
-  notificar('Meta eliminada correctamente')
+  try {
+    const respuesta = await fetch(
+      `${API_BASE}/goals/${metaSeleccionada.value.id}`,
+      { method: 'DELETE', headers: getHeaders() }
+    )
+
+    if (!respuesta.ok) {
+      notificar('No se pudo eliminar la meta', 'error')
+      return
+    }
+
+    await cargarMetas()
+    dialogEliminar.value = false
+    metaSeleccionada.value = null
+    notificar('Meta eliminada correctamente')
+  } catch (error) {
+    console.error('Error al eliminar la meta:', error)
+    notificar('No se pudo eliminar la meta', 'error')
+  }
 }
 
 function formatearFecha(fecha) {
   if (!fecha) return 'Sin fecha límite'
 
-  const [anio, mes, dia] = fecha.split('-').map(Number)
+  const [anio, mes, dia] = String(fecha).slice(0, 10).split('-').map(Number)
   if (!anio || !mes || !dia) return fecha
 
   return new Date(anio, mes - 1, dia).toLocaleDateString('es-SV', {
@@ -155,6 +246,10 @@ function formatearFecha(fecha) {
     year: 'numeric',
   })
 }
+
+onMounted(() => {
+  cargarMetas()
+})
 </script>
 
 <template>
