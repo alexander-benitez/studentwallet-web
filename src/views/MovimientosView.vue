@@ -16,15 +16,15 @@ const snackbar = ref(false)
 
 const tipos = [
   { title: 'Todos los movimientos', value: 'todos' },
-  { title: 'Solo ingresos', value: 'income' },
-  { title: 'Solo gastos', value: 'expense' },
+  { title: 'Solo ingresos', value: 'ingreso' },
+  { title: 'Solo gastos', value: 'gasto' },
 ]
 
 const categorias = computed(() => [
   'Todas',
   ...new Set(
     (finanzas?.movimientos || [])
-      .map(m => m.category)
+      .map(m => m.category?.name)
       .filter(Boolean)
   ),
 ])
@@ -32,7 +32,7 @@ const categorias = computed(() => [
 const movimientosFiltrados = computed(() => {
   return (finanzas?.movimientos || [])
     .filter(m => {
-      const texto = `${m.name} ${m.category}`.toLowerCase()
+      const texto = `${m.description} ${m.category?.name}`.toLowerCase()
 
       const coincideBusqueda = texto.includes(
         busqueda.value.toLowerCase()
@@ -44,7 +44,7 @@ const movimientosFiltrados = computed(() => {
 
       const coincideCategoria =
         filtroCategoria.value === 'Todas' ||
-        m.category === filtroCategoria.value
+        m.category?.name === filtroCategoria.value
 
       return coincideBusqueda &&
         coincideTipo &&
@@ -229,7 +229,7 @@ function eliminar() {
               <div class="movement-name">
                 <v-avatar
                   :color="
-                    movimiento.type === 'income'
+                    movimiento.type === 'ingreso'
                       ? 'success'
                       : 'error'
                   "
@@ -238,21 +238,21 @@ function eliminar() {
                 >
                   <v-icon>
                     {{
-                      movimiento.type === 'income'
+                      movimiento.type === 'ingreso'
                         ? 'mdi-arrow-down-left'
                         : 'mdi-arrow-up-right'
                     }}
                   </v-icon>
                 </v-avatar>
 
-                <strong>{{ movimiento.name }}</strong>
+                <strong>{{ movimiento.description }}</strong>
               </div>
             </td>
 
             <td>
               <v-chip
                 :color="
-                  movimiento.type === 'income'
+                  movimiento.type === 'ingreso'
                     ? 'success'
                     : 'error'
                 "
@@ -260,26 +260,26 @@ function eliminar() {
                 size="small"
               >
                 {{
-                  movimiento.type === 'income'
+                  movimiento.type === 'ingreso'
                     ? 'Ingreso'
                     : 'Gasto'
                 }}
               </v-chip>
             </td>
 
-            <td>{{ movimiento.category }}</td>
+            <td>{{ movimiento.category?.name }}</td>
 
             <td>{{ movimiento.date }}</td>
 
             <td
               class="text-right font-weight-bold"
               :class="
-                movimiento.type === 'income'
+                movimiento.type === 'ingreso'
                   ? 'text-success'
                   : 'text-error'
               "
             >
-              {{ movimiento.type === 'income' ? '+' : '-' }}
+              {{ movimiento.type === 'ingreso' ? '+' : '-' }}
               {{ dinero(movimiento.amount) }}
             </td>
 
@@ -339,7 +339,7 @@ function eliminar() {
 
         <p>
           Estás a punto de eliminar
-          <strong>{{ movimientoSeleccionado?.name }}</strong>.
+          <strong>{{ movimientoSeleccionado?.description }}</strong>.
           Esta acción no se puede deshacer.
         </p>
 

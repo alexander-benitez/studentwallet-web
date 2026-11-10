@@ -9,10 +9,10 @@ const finanzas = useFinanzasStore()
 
 const categoriasIngresos = computed(() =>
   (finanzas?.categorias || [])
-    .filter(categoria => categoria.tipo === 'income')
+    .filter(categoria => categoria.type === 'ingreso')
     .map(categoria => ({
-      title: categoria.nombre,
-      value: categoria.nombre,
+      title: categoria.name,
+      value: categoria.id,
     }))
 )
 
@@ -31,9 +31,9 @@ const busqueda = ref('')
 
 const ingresos = computed(() =>
   (finanzas?.movimientos || [])
-    .filter(m => m.type === 'income')
+    .filter(m => m.type === 'ingreso')
     .filter(m =>
-      `${m.name} ${m.category}`
+      `${m.description} ${m.category?.name}`
         .toLowerCase()
         .includes(busqueda.value.toLowerCase())
     )
@@ -71,14 +71,11 @@ async function guardarIngreso() {
   guardando.value = true
 
   finanzas?.agregarMovimiento({
-    name: concepto.value.trim(),
-    category: categoria.value,
     amount: Number(monto.value),
-    type: 'income',
+    type: 'ingreso',
+    category_id: categoria.value,
+    description: concepto.value.trim(),
     date: fecha.value,
-    description: descripcion.value,
-    icon: 'mdi-cash-plus',
-    color: 'success',
   })
 
   guardando.value = false
@@ -197,13 +194,13 @@ async function guardarIngreso() {
                   <v-icon>mdi-arrow-down-left</v-icon>
                 </v-avatar>
 
-                <strong>{{ ingreso.name }}</strong>
+                <strong>{{ ingreso.description }}</strong>
               </div>
             </td>
 
             <td>
               <v-chip color="primary" variant="tonal" size="small">
-                {{ ingreso.category }}
+                {{ ingreso.category?.name }}
               </v-chip>
             </td>
 

@@ -18,13 +18,13 @@ onMounted(async () => {
 
 // Mapeo reactivo compatible con el store y la API
 const transactions = computed(() => finanzas?.movimientos || [])
-const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_ingresos ?? 0)
-const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_gastos ?? 0)
-const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.saldo_total ?? 0)
+const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_incomes ?? 0)
+const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_expenses ?? 0)
+const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.balance ?? 0)
 
 const filteredTransactions = computed(() =>
   transactions.value.filter((t) => {
-    const texto = `${t.name || t.descripcion || t.description || ""} ${t.category?.name || t.category || ""}`
+    const texto = `${t.description || ""} ${t.category?.name || ""}`
     return texto.toLowerCase().includes(search.value.toLowerCase())
   })
 )
@@ -149,28 +149,28 @@ const money = (value) =>
             <td>
               <div class="transaction-name">
                 <v-avatar
-                  :color="transaction.type === 'income' ? 'success' : 'error'"
+                  :color="transaction.type === 'ingreso' ? 'success' : 'error'"
                   variant="tonal"
                   size="42"
                 >
                   <v-icon>
-                    {{ transaction.type === 'income' ? 'mdi-arrow-down-left' : 'mdi-arrow-up-right' }}
+                    {{ transaction.type === 'ingreso' ? 'mdi-arrow-down-left' : 'mdi-arrow-up-right' }}
                   </v-icon>
                 </v-avatar>
-                <strong>{{ transaction.name }}</strong>
+                <strong>{{ transaction.description }}</strong>
               </div>
             </td>
             <td>
               <v-chip size="small" variant="tonal">
-                {{ transaction.category }}
+                {{ transaction.category?.name }}
               </v-chip>
             </td>
             <td>{{ transaction.date }}</td>
             <td
               class="text-right font-weight-bold"
-              :class="transaction.type === 'income' ? 'text-success' : 'text-error'"
+              :class="transaction.type === 'ingreso' ? 'text-success' : 'text-error'"
             >
-              {{ transaction.type === 'income' ? '+' : '-' }}{{ money(transaction.amount) }}
+              {{ transaction.type === 'ingreso' ? '+' : '-' }}{{ money(transaction.amount) }}
             </td>
           </tr>
           <tr v-if="filteredTransactions.length === 0">
