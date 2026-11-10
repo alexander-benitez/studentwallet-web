@@ -1,10 +1,34 @@
 
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFinanzasStore } from '@/stores/finanzas'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
 const route = useRoute()
+const router = useRouter()
 const finanzas = useFinanzasStore()
+
+async function logout() {
+  const token = localStorage.getItem('auth_token')
+
+  try {
+    if (token) {
+      await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    }
+  } catch (error) {
+    console.error('Error al cerrar sesión en el servidor:', error)
+  } finally {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_info')
+    router.push('/')
+  }
+}
 
 defineProps({
   modelValue: {
@@ -91,7 +115,7 @@ const menu = [
           color="white"
           prepend-icon="mdi-logout"
           class="mt-4"
-          to="/"
+          @click="logout"
         >
           Cerrar sesión
         </v-btn>
