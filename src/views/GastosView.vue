@@ -9,10 +9,10 @@ const finanzas = useFinanzasStore()
 
 const categoriasGastos = computed(() =>
   (finanzas?.categorias || [])
-    .filter(categoria => categoria.tipo === 'expense')
+    .filter(categoria => categoria.type === 'gasto')
     .map(categoria => ({
-      title: categoria.nombre,
-      value: categoria.nombre,
+      title: categoria.name,
+      value: categoria.id,
     }))
 )
 
@@ -30,9 +30,9 @@ const descripcion = ref('')
 
 const gastos = computed(() =>
   (finanzas?.movimientos || [])
-    .filter(m => m.type === 'expense')
+    .filter(m => m.type === 'gasto')
     .filter(m =>
-      `${m.name} ${m.category}`
+      `${m.description} ${m.category?.name}`
         .toLowerCase()
         .includes(busqueda.value.toLowerCase())
     )
@@ -59,14 +59,11 @@ async function guardarGasto() {
   guardando.value = true
 
   finanzas?.agregarMovimiento({
-    name: concepto.value.trim(),
     amount: Number(monto.value),
-    category: categoria.value,
+    type: 'gasto',
+    category_id: categoria.value,
+    description: concepto.value.trim(),
     date: fecha.value,
-    description: descripcion.value,
-    type: 'expense',
-    icon: 'mdi-cash-minus',
-    color: 'error',
   })
 
   guardando.value = false
@@ -189,13 +186,13 @@ async function guardarGasto() {
                   <v-icon>mdi-arrow-up-right</v-icon>
                 </v-avatar>
 
-                <strong>{{ gasto.name }}</strong>
+                <strong>{{ gasto.description }}</strong>
               </div>
             </td>
 
             <td>
               <v-chip color="error" variant="tonal" size="small">
-                {{ gasto.category }}
+                {{ gasto.category?.name }}
               </v-chip>
             </td>
 

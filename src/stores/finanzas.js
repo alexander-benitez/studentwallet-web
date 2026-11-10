@@ -4,7 +4,10 @@ import { ref, computed } from "vue";
 export const useFinanzasStore = defineStore("finanzas", () => {
   const movimientos = ref([]);
   const categorias = ref([]);
-  const balanceData = ref({ saldo_total: 0, total_ingresos: 0, total_gastos: 0 });
+  const balanceData = ref({ balance: 0, total_incomes: 0, total_expenses: 0 });
+  const saldo = ref(0);
+  const ingresos = ref(0);
+  const gastos = ref(0);
   const cargando = ref(false);
   const error = ref(null);
 
@@ -40,7 +43,10 @@ export const useFinanzasStore = defineStore("finanzas", () => {
       const res = await fetch(`${API_BASE}/transactions`, { headers: getHeaders() });
       if (res.ok) {
         const json = await res.json();
-        movimientos.value = json.data || json || [];
+        movimientos.value = (json.data || json || []).map((movimiento) => ({
+          ...movimiento,
+          description: movimiento.description ?? ""
+        }));
       } else {
         error.value = "No se pudieron obtener los movimientos.";
       }
@@ -58,7 +64,11 @@ export const useFinanzasStore = defineStore("finanzas", () => {
       const res = await fetch(`${API_BASE}/balance`, { headers: getHeaders() });
       if (res.ok) {
         const json = await res.json();
-        balanceData.value = json.data || json;
+        const data = json.data || json;
+        balanceData.value = data;
+        saldo.value = Number(data.balance ?? 0);
+        ingresos.value = Number(data.total_incomes ?? 0);
+        gastos.value = Number(data.total_expenses ?? 0);
       }
     } catch (err) {
       console.error("Error al consultar balance:", err);
@@ -69,10 +79,24 @@ export const useFinanzasStore = defineStore("finanzas", () => {
   async function agregarMovimiento(nuevoMovimiento) {
     cargando.value = true;
     try {
+      const type = nuevoMovimiento.type === "ingreso" || nuevoMovimiento.type === "income"
+        ? "ingreso"
+        : "gasto";
+      const categoryId = nuevoMovimiento.category_id
+        ?? nuevoMovimiento.category?.id
+        ?? nuevoMovimiento.category?.value
+        ?? nuevoMovimiento.category;
+      const payload = {
+        amount: Number(nuevoMovimiento.amount),
+        type,
+        category_id: categoryId,
+        description: nuevoMovimiento.description ?? nuevoMovimiento.name ?? "",
+        date: nuevoMovimiento.date
+      };
       const res = await fetch(`${API_BASE}/transactions`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify(nuevoMovimiento)
+        body: JSON.stringify(payload)
       });
       const json = await res.json();
       if (res.ok) {
@@ -91,8 +115,8 @@ export const useFinanzasStore = defineStore("finanzas", () => {
   }
 
   // Getters computados
-  const saldoActual = computed(() => Number(balanceData.value.saldo_total ?? 0));
-  const totalIngresos = computed(() => Number(balanceData.value.total_ingresos ?? 0));
+  const saldoActual = computed(() => saldo.value);
+  const totalIngresos = computed(() => ingresos.value);
   const nombreCompleto = computed(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user_info"));
@@ -101,12 +125,15 @@ export const useFinanzasStore = defineStore("finanzas", () => {
       return "Estudiante";
     }
   });
-  const totalGastos = computed(() => Number(balanceData.value.total_gastos ?? 0));
+  const totalGastos = computed(() => gastos.value);
 
   return {
     movimientos,
     categorias,
     balanceData,
+    saldo,
+    ingresos,
+    gastos,
     cargando,
     error,
     saldoActual,
