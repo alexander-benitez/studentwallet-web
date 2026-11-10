@@ -1,6 +1,8 @@
 
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
 defineProps({
   modelValue: {
@@ -11,6 +13,28 @@ defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 const route = useRoute()
+const router = useRouter()
+
+async function logout() {
+  const token = localStorage.getItem('auth_token')
+
+  try {
+    if (token) {
+      await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    }
+  } catch (error) {
+    console.error('Error al cerrar sesión en el servidor:', error)
+  } finally {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_info')
+    router.push('/')
+  }
+}
 
 const menu = [
   {
@@ -102,12 +126,12 @@ const menu = [
         </div>
 
         <v-btn
-          to="/"
           variant="tonal"
           color="white"
           block
           prepend-icon="mdi-logout"
           class="mt-4"
+          @click="logout"
         >
           Cerrar sesión
         </v-btn>
