@@ -1,9 +1,8 @@
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useFinanzasStore } from '@/stores/finanzas'
+import { ref, onMounted } from 'vue'
 
-const finanzas = useFinanzasStore()
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
 
 const categoria = ref('Mejora')
 const comentario = ref('')
@@ -27,11 +26,38 @@ const minCaracteres = (v) =>
   String(v ?? '').trim().length >= 10 ||
   'Escribe al menos 10 caracteres'
 
-const misComentarios = computed(() =>
-  (finanzas?.comentarios || []).filter(
-    (item) => item.usuario === finanzas?.nombreCompleto
-  )
-)
+const misComentarios = ref([])
+
+const estados = {
+  pendiente: 'Pendiente',
+  leida: 'En revisión',
+  resuelta: 'Resuelto',
+}
+
+async function cargarComentarios() {
+  try {
+    const respuesta = await fetch(`${API_BASE}/suggestions`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    })
+
+    if (!respuesta.ok) return
+
+    const datos = await respuesta.json()
+
+    misComentarios.value = (datos.data || []).map((item) => ({
+      id: item.id,
+      categoria: item.title,
+      comentario: item.message,
+      estado: estados[item.status] || 'Pendiente',
+      fecha: new Date(item.created_at).toLocaleDateString(),
+    }))
+  } catch {
+    mensaje.value = 'No se pudieron cargar tus comentarios.'
+    snackbar.value = true
+  }
+}
 
 async function enviarComentario() {
   if (loading.value) return
@@ -49,24 +75,44 @@ async function enviarComentario() {
   loading.value = true
 
   try {
-    finanzas?.agregarComentario({
-      usuario: finanzas?.nombreCompleto,
-      categoria: categoria.value,
-      comentario: comentario.value.trim(),
-      calificacion: calificacion.value,
+    const respuesta = await fetch(`${API_BASE}/suggestions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+      body: JSON.stringify({
+        title: categoria.value,
+        message: `[Calificación: ${calificacion.value}/5] ${comentario.value.trim()}`,
+      }),
     })
 
-    comentario.value = ''
-    categoria.value = 'Mejora'
-    calificacion.value = 0
-    formulario.value.resetValidation()
+    if (respuesta.ok) {
+      comentario.value = ''
+      categoria.value = 'Mejora'
+      calificacion.value = 0
+      formulario.value.resetValidation()
 
-    mensaje.value = '¡Tu comentario fue enviado correctamente!'
+      mensaje.value = '¡Tu comentario fue enviado correctamente!'
+      snackbar.value = true
+
+      await cargarComentarios()
+    } else {
+      mensaje.value = 'Hubo un error al enviar tu comentario.'
+      snackbar.value = true
+    }
+  } catch {
+    mensaje.value = 'Hubo un error al enviar tu comentario.'
     snackbar.value = true
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  cargarComentarios()
+})
 </script>
 
 <template>
