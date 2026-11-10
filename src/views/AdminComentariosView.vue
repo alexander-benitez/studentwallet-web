@@ -1,8 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useFinanzasStore } from '@/stores/finanzas'
+import { ref, computed, onMounted } from 'vue'
 
-const finanzas = useFinanzasStore()
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
 
 const busqueda = ref('')
 const filtroEstado = ref('Todos')
@@ -23,8 +22,54 @@ const categorias = [
   'Opinión general',
 ]
 
+const etiquetasEstado = {
+  pendiente: 'Pendiente',
+  leida: 'En revisión',
+  resuelta: 'Resuelto',
+}
+
+const comentarios = ref([])
+
+async function cargarSugerencias() {
+  try {
+    const respuesta = await fetch(`${API_BASE}/admin/suggestions`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    })
+
+    if (!respuesta.ok) return
+
+    const datos = await respuesta.json()
+
+    comentarios.value = (datos.data || []).map(item => {
+      const calificacion = Number(
+        (item.message || '').match(/\[Calificación:\s*(\d+)\s*\/\s*5\]/)?.[1]
+      ) || 0
+
+      return {
+        id: item.id,
+        usuario: item.user?.name || 'Usuario',
+        comentario: (item.message || '').replace(
+          /\[Calificación:\s*\d+\s*\/\s*5\]\s*/,
+          ''
+        ),
+        categoria: item.title || 'Opinión general',
+        estado: etiquetasEstado[item.status] || 'Pendiente',
+        fecha: item.created_at
+          ? new Date(item.created_at).toLocaleDateString('es-SV')
+          : '',
+        calificacion,
+      }
+    })
+  } catch (error) {
+    console.error('Error al cargar las sugerencias:', error)
+  }
+}
+
 const comentariosFiltrados = computed(() => {
-  return  (finanzas?.comentarios || []).filter((item) => {
+  return comentarios.value.filter((item) => {
     const texto = busqueda.value.toLowerCase().trim()
 
     const coincideBusqueda =
@@ -47,28 +92,29 @@ const comentariosFiltrados = computed(() => {
   })
 })
 
-const total = computed(() => finanzas?.comentarios?.length || 0)
+const total = computed(() => comentarios.value.length)
 
 const pendientes = computed(() =>
-   (finanzas?.comentarios || []).filter(
+  comentarios.value.filter(
     (item) => item.estado === 'Pendiente'
   ).length
 )
 
 const enRevision = computed(() =>
-   (finanzas?.comentarios || []).filter(
+  comentarios.value.filter(
     (item) => item.estado === 'En revisión'
   ).length
 )
 
 const resueltos = computed(() =>
-   (finanzas?.comentarios || []).filter(
+  comentarios.value.filter(
     (item) => item.estado === 'Resuelto'
   ).length
 )
 
 function cambiarEstado(id, nuevoEstado) {
-  finanzas?.actualizarEstadoComentario(id, nuevoEstado)
+  const comentario = comentarios.value.find((item) => item.id === id)
+  if (comentario) comentario.estado = nuevoEstado
 
   mensaje.value = 'Estado actualizado correctamente.'
   snackbar.value = true
@@ -79,6 +125,10 @@ function colorEstado(estado) {
   if (estado === 'En revisión') return 'info'
   return 'warning'
 }
+
+onMounted(() => {
+  cargarSugerencias()
+})
 </script>
 
 <template>
