@@ -8,7 +8,7 @@ const router = useRouter()
 const finanzas = useFinanzasStore()
 
 const categoriasGastos = computed(() =>
-  finanzas.categorias
+  (finanzas?.categorias || [])
     .filter(categoria => categoria.tipo === 'expense')
     .map(categoria => ({
       title: categoria.nombre,
@@ -29,7 +29,7 @@ const fecha = ref(new Date().toLocaleDateString('en-CA'))
 const descripcion = ref('')
 
 const gastos = computed(() =>
-  finanzas.movimientos
+  (finanzas?.movimientos || [])
     .filter(m => m.type === 'expense')
     .filter(m =>
       `${m.name} ${m.category}`
@@ -58,7 +58,7 @@ async function guardarGasto() {
 
   guardando.value = true
 
-  finanzas.agregarMovimiento({
+  finanzas?.agregarMovimiento({
     name: concepto.value.trim(),
     amount: Number(monto.value),
     category: categoria.value,
@@ -123,7 +123,7 @@ async function guardarGasto() {
             <v-icon size="28">mdi-cash-minus</v-icon>
           </div>
 
-          <h2>{{ dinero(finanzas.gastos) }}</h2>
+          <h2>{{ dinero(finanzas?.gastos) }}</h2>
 
           <div class="summary-footer">
             <v-icon size="18">mdi-trending-down</v-icon>
@@ -142,7 +142,7 @@ async function guardarGasto() {
             </v-avatar>
           </div>
 
-          <h2>{{ dinero(finanzas.saldo) }}</h2>
+          <h2>{{ dinero(finanzas?.saldo) }}</h2>
 
           <div class="summary-footer">
             Balance actual de tus finanzas

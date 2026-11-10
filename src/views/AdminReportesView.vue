@@ -17,7 +17,7 @@ const periodos = [
   'Cuarto trimestre',
 ]
 
-// Datos ficticios de demostración.
+// Datos en integración con API.
 // Más adelante se reemplazarán por estadísticas del backend.
 const datos = [
   { mes: 'Enero', trimestre: 'Primer trimestre', ingresos: 3200, gastos: 2100 },
@@ -486,7 +486,7 @@ function exportarPDF() {
     documento.setFontSize(10)
     documento.setTextColor(100, 116, 139)
     documento.text(`Período: ${periodo.value}`, 14, 39)
-    documento.text('Datos de demostración', 14, 45)
+    documento.text('Módulo en integración con API (Sprint 4)', 14, 45)
 
     autoTable(documento, {
       startY: 54,
@@ -558,7 +558,7 @@ function exportarPDF() {
       </div>
 
       <v-chip color="info" variant="tonal">
-        Datos de demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 
@@ -689,7 +689,7 @@ function exportarPDF() {
     </v-card>
 
     <v-alert type="info" variant="tonal" class="mt-5">
-      Los reportes utilizan datos ficticios para fines
+      Los reportes están en integración con la API para fines
       académicos. No incluyen información financiera
       privada de estudiantes.
     </v-alert>

@@ -22,11 +22,11 @@ const datos = ref({
 
 function cargarPerfil() {
   datos.value = {
-    nombre: finanzas.perfil.nombre || '',
-    apellido: finanzas.perfil.apellido || '',
-    correo: finanzas.perfil.correo || '',
-    universidad: finanzas.perfil.universidad || '',
-    carrera: finanzas.perfil.carrera || '',
+    nombre: finanzas?.perfil?.nombre || '',
+    apellido: finanzas?.perfil?.apellido || '',
+    correo: finanzas?.perfil?.correo || '',
+    universidad: finanzas?.perfil?.universidad || '',
+    carrera: finanzas?.perfil?.carrera || '',
   }
 }
 
@@ -56,12 +56,12 @@ const correoValido = v =>
 const hayCambios = computed(() =>
   ['nombre', 'apellido', 'correo', 'universidad', 'carrera']
     .some(campo =>
-      datos.value[campo] !== (finanzas.perfil[campo] || '')
+      datos.value[campo] !== ((finanzas?.perfil || {})[campo] || '')
     )
 )
 
 watch(
-  () => finanzas.perfil,
+  () => finanzas?.perfil,
   cargarPerfil,
   { deep: true }
 )
@@ -73,7 +73,7 @@ async function guardarPerfil() {
   guardando.value = true
 
   try {
-    finanzas.actualizarPerfil(datos.value)
+    finanzas?.actualizarPerfil(datos.value)
     mensaje.value = 'Tu perfil se actualizó correctamente'
     snackbar.value = true
   } finally {

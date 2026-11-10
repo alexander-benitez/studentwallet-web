@@ -1,4 +1,3 @@
-
 <script setup>
 
 import { ref, computed } from 'vue'
@@ -15,7 +14,7 @@ const snackbar = ref(false)
 const mensaje = ref('')
 const colorMensaje = ref('success')
 
-const preferencias = computed(() => finanzas.configuracion)
+const preferencias = computed(() => finanzas?.configuracion || {})
 
 const dinero = valor =>
   new Intl.NumberFormat('es-SV', {
@@ -24,7 +23,7 @@ const dinero = valor =>
   }).format(Number(valor) || 0)
 
 function actualizarPreferencia(campo, valor) {
-  finanzas.actualizarConfiguracion({
+  finanzas?.actualizarConfiguracion({
     [campo]: valor,
   })
 
@@ -38,7 +37,7 @@ function notificar(texto, color = 'success') {
 }
 
 function restablecerPreferencias() {
-  finanzas.restablecerConfiguracion()
+  finanzas?.restablecerConfiguracion()
   dialogRestablecer.value = false
   notificar('Configuración restablecida correctamente')
 }
@@ -164,10 +163,10 @@ function exportarDatos() {
     const documento = new jsPDF()
     const fecha = new Date().toLocaleDateString('es-SV')
 
-    const movimientos = finanzas.movimientos || []
-    const presupuestos = finanzas.presupuestos || []
-    const metas = finanzas.metas || []
-    const perfil = finanzas.perfil || {}
+    const movimientos = finanzas?.movimientos || []
+    const presupuestos = finanzas?.presupuestos || []
+    const metas = finanzas?.metas || []
+    const perfil = finanzas?.perfil || {}
 
     // ENCABEZADO
     documento.setFontSize(22)
@@ -203,7 +202,7 @@ function exportarDatos() {
       startY: inicio,
       head: [['Indicador', 'Valor']],
       body: [
-        ['Saldo actual', dinero(finanzas.saldo)],
+        ['Saldo actual', dinero(finanzas?.saldo)],
         ['Total de movimientos', String(movimientos.length)],
         ['Total de presupuestos', String(presupuestos.length)],
         ['Total de metas de ahorro', String(metas.length)],
@@ -299,9 +298,9 @@ function exportarDatos() {
 }
 
 const resumen = computed(() => ({
-  movimientos: finanzas.movimientos.length,
-  presupuestos: finanzas.presupuestos.length,
-  metas: finanzas.metas.length,
+  movimientos: (finanzas?.movimientos || []).length,
+  presupuestos: (finanzas?.presupuestos || []).length,
+  metas: (finanzas?.metas || []).length,
 }))
 
 </script>
@@ -387,7 +386,7 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias.notificaciones"
+              :model-value="preferencias?.notificaciones"
               color="primary"
               hide-details
               inset
@@ -416,7 +415,7 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias.alertasPresupuesto"
+              :model-value="preferencias?.alertasPresupuesto"
               color="primary"
               hide-details
               inset
@@ -445,7 +444,7 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias.mostrarConsejos"
+              :model-value="preferencias?.mostrarConsejos"
               color="primary"
               hide-details
               inset
@@ -581,7 +580,7 @@ const resumen = computed(() => ({
 
             <div class="balance-label">Saldo actual</div>
             <h2 class="balance-value">
-              {{ dinero(finanzas.saldo) }}
+              {{ dinero(finanzas?.saldo) }}
             </h2>
 
             <v-btn

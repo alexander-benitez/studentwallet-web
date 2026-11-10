@@ -1,9 +1,8 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
-import { useFinanzasStore } from '@/stores/finanzas'
 
 import { Bar, Doughnut } from 'vue-chartjs'
 
@@ -29,10 +28,13 @@ ChartJS.register(
 )
 
 const router = useRouter()
-const finanzas = useFinanzasStore()
 const theme = useTheme()
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+
 const anioSeleccionado = ref(new Date().getFullYear())
+const movimientos = ref([])
+const saldoBalance = ref(null)
 
 const nombresMeses = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -45,12 +47,67 @@ const dinero = valor =>
     currency: 'USD',
   }).format(valor)
 
+// TOTALES DE INGRESOS Y GASTOS
+const totalIngresos = computed(() =>
+  movimientos.value
+    .filter(m => m.type === 'ingreso')
+    .reduce((total, m) => total + Number(m.amount || 0), 0)
+)
+
+const totalGastos = computed(() =>
+  movimientos.value
+    .filter(m => m.type === 'gasto')
+    .reduce((total, m) => total + Number(m.amount || 0), 0)
+)
+
+// TARJETAS DE RESUMEN
+const finanzas = computed(() => ({
+  ingresos: totalIngresos.value,
+  gastos: totalGastos.value,
+  saldo: saldoBalance.value ?? (totalIngresos.value - totalGastos.value),
+}))
+
+async function cargarEstadisticas() {
+  const headers = {
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+  }
+
+  try {
+    const [respuestaTransacciones, respuestaBalance] = await Promise.all([
+      fetch(`${API_BASE}/transactions`, { headers }),
+      fetch(`${API_BASE}/balance`, { headers }),
+    ])
+
+    if (respuestaTransacciones.ok) {
+      const datos = await respuestaTransacciones.json()
+
+      movimientos.value = (datos.data || []).map(m => ({
+        ...m,
+        amount: Number(m.amount) || 0,
+        category: m.category?.name || 'Otros',
+      }))
+    }
+
+    if (respuestaBalance.ok) {
+      const datos = await respuestaBalance.json()
+      saldoBalance.value = Number(datos.data?.balance) || 0
+    }
+  } catch (error) {
+    console.error('Error al cargar las estadísticas:', error)
+  }
+}
+
+onMounted(() => {
+  cargarEstadisticas()
+})
+
 // GRÁFICO: INGRESOS VS GASTOS
 const datosBarras = computed(() => {
-  const ingresos = Array(12).fill(0)
-  const gastos = Array(12).fill(0)
+  const ingresos = Array(12).fill(0);
+  const gastos = Array(12).fill(0);
 
-  finanzas.movimientos.forEach(m => {
+  movimientos.value.forEach(m => {
     if (!m.date) return
 
     const partes = m.date.split('-')
@@ -65,8 +122,8 @@ const datosBarras = computed(() => {
       !Number.isFinite(monto)
     ) return
 
-    if (m.type === 'income') ingresos[mes] += monto
-    if (m.type === 'expense') gastos[mes] += monto
+    if (m.type === 'ingreso') ingresos[mes] += monto
+    if (m.type === 'gasto') gastos[mes] += monto
   })
 
   return {
@@ -92,11 +149,11 @@ const datosBarras = computed(() => {
 
 // GRÁFICO: GASTOS POR CATEGORÍA
 const datosCategorias = computed(() => {
-  const totales = {}
+  const totales = {};
 
-  finanzas.movimientos.forEach(m => {
+  movimientos.value.forEach(m => {
     if (
-      m.type !== 'expense' ||
+      m.type !== 'gasto' ||
       !m.date?.startsWith(String(anioSeleccionado.value))
     ) return
 
@@ -107,6 +164,8 @@ const datosCategorias = computed(() => {
 
     totales[categoria] = (totales[categoria] || 0) + monto
   })
+
+  if (Object.keys(totales).length === 0) return {}
 
   return {
     labels: Object.keys(totales),
@@ -229,7 +288,7 @@ const opcionesCategorias = computed(() => {
 
 // COMPROBAR SI EXISTEN GASTOS
 const hayGastos = computed(() =>
-  datosCategorias.value.datasets[0].data.some(valor => valor > 0)
+  datosCategorias.value.datasets?.[0]?.data?.some(valor => valor > 0) ?? false
 )
 </script>
 
@@ -264,7 +323,7 @@ const hayGastos = computed(() =>
           <p>Total de ingresos</p>
 
           <h2 class="text-success">
-            {{ dinero(finanzas.ingresos) }}
+            {{ dinero(finanzas?.ingresos) }}
           </h2>
         </v-card>
       </v-col>
@@ -278,7 +337,7 @@ const hayGastos = computed(() =>
           <p>Total de gastos</p>
 
           <h2 class="text-error">
-            {{ dinero(finanzas.gastos) }}
+            {{ dinero(finanzas?.gastos) }}
           </h2>
         </v-card>
       </v-col>
@@ -292,7 +351,7 @@ const hayGastos = computed(() =>
           <p>Balance disponible</p>
 
           <h2>
-            {{ dinero(finanzas.saldo) }}
+            {{ dinero(finanzas?.saldo) }}
           </h2>
         </v-card>
       </v-col>

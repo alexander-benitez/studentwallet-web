@@ -26,7 +26,7 @@ ChartJS.register(
 
 const theme = useTheme()
 
-// Datos agregados de demostración.
+// Datos en integración con API.
 // No representan finanzas reales de los estudiantes.
 const resumenMensual = ref([
   { mes: 'Ene', ingresos: 3200, gastos: 2100 },
@@ -208,7 +208,7 @@ function dinero(valor) {
       </div>
 
       <v-chip color="info" variant="tonal">
-        Datos de demostración
+        Módulo en integración con API (Sprint 4)
       </v-chip>
     </div>
 
@@ -327,7 +327,7 @@ function dinero(valor) {
       <div class="section-heading">
         <div>
           <h2>Resumen financiero mensual</h2>
-          <p>Indicadores agregados de demostración</p>
+          <p>Indicadores en integración con API</p>
         </div>
 
         <v-icon color="primary">

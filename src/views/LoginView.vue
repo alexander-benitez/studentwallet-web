@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -33,44 +32,62 @@ function mostrarMensaje(texto, tipo = 'error') {
   snackbar.value = true
 }
 
-// INICIO DE SESIÓN DEMOSTRATIVO
-
+// INICIO DE SESIÓN CONECTADO A LARAVEL SANCTUM
 async function login() {
   if (loading.value) return
 
   const resultado = await formulario.value?.validate()
 
   if (!resultado?.valid) {
-    mostrarMensaje('Revisa los campos señalados antes de continuar.')
+    mostrarMensaje("Revisa los campos señalados antes de continuar.")
     return
   }
 
   if (password.value.length < 6) {
-    mostrarMensaje('La contraseña debe tener al menos 6 caracteres.')
+    mostrarMensaje("La contraseña debe tener al menos 6 caracteres.")
     return
   }
 
   loading.value = true
 
   try {
-    // Simulación de procesamiento.
-    // Sustituiremos esto por una petición al backend.
-    await new Promise((resolve) => setTimeout(resolve, 900))
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
 
-    mostrarMensaje(
-      'Acceso de demostración. No se han verificado credenciales reales.',
-      'info'
-    )
+    const response = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        email: email.value.trim(),
+        password: password.value.trim()
+      })
+    })
 
-    const destino =
-  tipoAcceso.value === 'administrador'
-    ? '/admin'
-    : '/dashboard'
+    const res = await response.json()
 
-await router.push(destino)
-  } catch (error) {
-    console.error('Error al navegar:', error)
-    mostrarMensaje('No se pudo abrir el Dashboard.')
+    if (response.ok) {
+      const token = res.data?.token || res.token
+      const user = res.data?.user || res.user
+
+      localStorage.setItem("auth_token", token)
+      // Guardar el usuario 
+      localStorage.setItem("user_info", JSON.stringify(user))
+
+      // Verificar el rol para redirigir
+      const rolUsuario = user?.rol || user?.role || res.data?.rol || res.data?.role;
+      if (rolUsuario === 'administrador') {
+        router.push("/admin")
+      } else {
+        router.push("/dashboard")
+      }
+    } else {
+      mostrarMensaje(res.message || "Credenciales incorrectas.", "error")
+    }
+  } catch (err) {
+    console.error("Error de red al conectar con backend:", err)
+    mostrarMensaje("No se pudo conectar con el servidor backend.", "error")
   } finally {
     loading.value = false
   }
@@ -147,112 +164,57 @@ await router.push(destino)
 
           <v-form ref="formulario" @submit.prevent="login">
             <div class="mb-6">
-  <label>Tipo de acceso</label>
+              <label>Tipo de acceso</label>
 
-  <v-item-group
-    v-model="tipoAcceso"
-    mandatory
-    class="d-flex ga-3 mt-3"
-  >
-    <v-item
-      v-slot="{ isSelected, toggle }"
-      value="estudiante"
-    >
-      <v-card
-        class="access-option"
-        :class="{ 'access-selected': isSelected }"
-        variant="outlined"
-        rounded="lg"
-        @click="toggle"
-      >
-        <v-icon
-          size="27"
-          color="primary"
-          class="mb-2"
-        >
-          mdi-school-outline
-        </v-icon>
+              <v-item-group v-model="tipoAcceso" mandatory class="d-none">
+                <v-item v-slot="{ isSelected, toggle }" value="estudiante">
+                  <v-card class="access-option" :class="{ 'access-selected': isSelected }" variant="outlined"
+                    rounded="lg" @click="toggle">
+                    <v-icon size="27" color="primary" class="mb-2">
+                      mdi-school-outline
+                    </v-icon>
 
-        <strong>Estudiante</strong>
-        <small>Mis finanzas</small>
-      </v-card>
-    </v-item>
+                    <strong>Estudiante</strong>
+                    <small>Mis finanzas</small>
+                  </v-card>
+                </v-item>
 
-    <v-item
-      v-slot="{ isSelected, toggle }"
-      value="administrador"
-    >
-      <v-card
-        class="access-option"
-        :class="{ 'access-selected': isSelected }"
-        variant="outlined"
-        rounded="lg"
-        @click="toggle"
-      >
-        <v-icon
-          size="27"
-          color="#7C3AED"
-          class="mb-2"
-        >
-          mdi-shield-account-outline
-        </v-icon>
+                <v-item v-slot="{ isSelected, toggle }" value="administrador">
+                  <v-card class="access-option" :class="{ 'access-selected': isSelected }" variant="outlined"
+                    rounded="lg" @click="toggle">
+                    <v-icon size="27" color="#7C3AED" class="mb-2">
+                      mdi-shield-account-outline
+                    </v-icon>
 
-        <strong>Administrador</strong>
-        <small>Panel de gestión</small>
-      </v-card>
-    </v-item>
-  </v-item-group>
-</div>
+                    <strong>Administrador</strong>
+                    <small>Panel de gestión</small>
+                  </v-card>
+                </v-item>
+              </v-item-group>
+            </div>
             <label>Correo electrónico</label>
-                      <v-text-field
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            placeholder="ejemplo@correo.com"
-            prepend-inner-icon="mdi-email-outline"
-            variant="outlined"
-            rounded="lg"
-            :rules="[required, validEmail]"
-            :disabled="loading"
-            class="mt-2 mb-3"
-          />
+            <v-text-field v-model="email" type="email" autocomplete="email" placeholder="ejemplo@correo.com"
+              prepend-inner-icon="mdi-email-outline" variant="outlined" rounded="lg" :rules="[required, validEmail]"
+              :disabled="loading" class="mt-2 mb-3" />
 
             <label>Contraseña</label>
-            <v-text-field
-          v-model="password"
-          placeholder="Ingresa tu contraseña"
-          prepend-inner-icon="mdi-lock-outline"
-          :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
-          :type="visible ? 'text' : 'password'"
-         autocomplete="current-password"
-          variant="outlined"
-          rounded="lg"
-          :rules="[required]"
-          :disabled="loading"
-          class="mt-2"
-          @click:append-inner="visible = !visible"
-        />
+            <v-text-field v-model="password" placeholder="Ingresa tu contraseña" prepend-inner-icon="mdi-lock-outline"
+              :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'" :type="visible ? 'text' : 'password'"
+              autocomplete="current-password" variant="outlined" rounded="lg" :rules="[required]" :disabled="loading"
+              class="mt-2" @click:append-inner="visible = !visible" />
 
             <div class="text-right mb-6">
               <a href="#" class="forgot" @click.prevent="
                 message = 'La recuperación de contraseña estará disponible próximamente.';
-                color = 'info';
-                snackbar = true
-              ">
+              color = 'info';
+              snackbar = true
+                ">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              size="x-large"
-              rounded="lg"
-              :loading="loading"
-              class="login-btn"
-              append-icon="mdi-arrow-right"
-            >
+            <v-btn type="submit" color="primary" block size="x-large" rounded="lg" :loading="loading" class="login-btn"
+              append-icon="mdi-arrow-right">
               Iniciar sesión
             </v-btn>
           </v-form>
@@ -260,8 +222,8 @@ await router.push(destino)
           <div class="register-text">
             ¿No tienes una cuenta?
             <router-link to="/registro">
-  Regístrate gratis
-</router-link>
+              Regístrate gratis
+            </router-link>
           </div>
 
           <div class="security">
@@ -272,13 +234,7 @@ await router.push(destino)
       </v-col>
     </v-row>
 
-    <v-snackbar
-      v-model="snackbar"
-      :color="color"
-      location="top right"
-      :timeout="3500"
-      rounded="lg"
-    >
+    <v-snackbar v-model="snackbar" :color="color" location="top right" :timeout="3500" rounded="lg">
       {{ message }}
       <template #actions>
         <v-btn icon="mdi-close" variant="text" @click="snackbar = false" />
@@ -288,7 +244,6 @@ await router.push(destino)
 </template>
 
 <style scoped>
-
 /* =========================================
    ESTRUCTURA GENERAL
 ========================================= */
@@ -298,7 +253,7 @@ await router.push(destino)
   background: rgb(var(--v-theme-background));
 }
 
-.login-page > .v-row {
+.login-page>.v-row {
   min-height: 100vh;
 }
 
@@ -312,12 +267,10 @@ await router.push(destino)
   min-height: 100vh;
   overflow: hidden;
   color: #FFFFFF;
-  background: linear-gradient(
-    135deg,
-    #14213D 0%,
-    #1E3A8A 55%,
-    #4338CA 100%
-  );
+  background: linear-gradient(135deg,
+      #14213D 0%,
+      #1E3A8A 55%,
+      #4338CA 100%);
 }
 
 .brand-content {
@@ -669,5 +622,4 @@ await router.push(destino)
     padding: 22px 18px;
   }
 }
-
 </style>

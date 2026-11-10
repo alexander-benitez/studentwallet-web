@@ -85,10 +85,10 @@ const categorias = [
 ]
 
 const presupuestosMes = computed(() =>
-  finanzas.presupuestos
+  (finanzas?.presupuestos || [])
     .filter(p => p.month === mesSeleccionado.value)
     .map(p => {
-      const gastado = finanzas.movimientos
+      const gastado = (finanzas?.movimientos || [])
         .filter(m =>
           m.type === 'expense' &&
           m.category === p.category &&
@@ -164,7 +164,7 @@ async function guardar() {
   const resultado = await form.value.validate()
   if (!resultado.valid) return
 
-  finanzas.guardarPresupuesto({
+  finanzas?.guardarPresupuesto({
     category: categoria.value,
     month: mes.value,
     limit: Number(limite.value),
@@ -186,7 +186,7 @@ function confirmarEliminar(presupuesto) {
 function eliminar() {
   if (!presupuestoEliminar.value) return
 
-  finanzas.eliminarPresupuesto(
+  finanzas?.eliminarPresupuesto(
     presupuestoEliminar.value.category,
     presupuestoEliminar.value.month
   )

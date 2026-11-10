@@ -115,4 +115,19 @@ const router = createRouter({
 
 })
 
+// Guard de seguridad para proteger rutas
+router.beforeEach((to) => {
+  const token = localStorage.getItem("auth_token")
+  const userInfo = JSON.parse(localStorage.getItem("user_info") || "{}")
+  const rol = userInfo?.rol || userInfo?.role
+
+  if (to.path.startsWith("/admin") && rol !== "administrador") {
+    return "/"
+  }
+  if (to.path !== "/" && to.path !== "/registro" && !token) {
+    return "/"
+  }
+  return true
+})
+
 export default router

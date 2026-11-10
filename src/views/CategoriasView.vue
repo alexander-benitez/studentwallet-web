@@ -63,18 +63,18 @@ const reglas = [
 const categoriasFiltradas = computed(() => {
   const texto = String(busqueda.value || '').toLowerCase().trim()
 
-  return finanzas.categorias.filter(categoria =>
+  return (finanzas?.categorias || []).filter(categoria =>
     categoria.tipo === tipoActivo.value &&
     categoria.nombre.toLowerCase().includes(texto)
   )
 })
 
 const totalGastos = computed(() =>
-  finanzas.categorias.filter(c => c.tipo === 'expense').length
+  (finanzas?.categorias || []).filter(c => c.tipo === 'expense').length
 )
 
 const totalIngresos = computed(() =>
-  finanzas.categorias.filter(c => c.tipo === 'income').length
+  (finanzas?.categorias || []).filter(c => c.tipo === 'income').length
 )
 
 function notificar(texto, color = 'success') {
@@ -108,8 +108,8 @@ async function guardarCategoria() {
   if (!resultadoValidacion.valid) return
 
   const resultado = editandoId.value
-    ? finanzas.editarCategoria(editandoId.value, categoriaForm.value)
-    : finanzas.agregarCategoria(categoriaForm.value)
+    ? finanzas?.editarCategoria(editandoId.value, categoriaForm.value)
+    : finanzas?.agregarCategoria(categoriaForm.value)
 
   if (!resultado.ok) {
     notificar(resultado.mensaje, 'error')
@@ -128,7 +128,7 @@ function confirmarEliminar(categoria) {
 function eliminarCategoria() {
   if (!categoriaEliminar.value) return
 
-  const resultado = finanzas.eliminarCategoria(
+  const resultado = finanzas?.eliminarCategoria(
     categoriaEliminar.value.id
   )
 
