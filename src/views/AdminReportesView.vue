@@ -2,7 +2,7 @@
   import ExcelJS from 'exceljs'
   import { jsPDF } from 'jspdf'
   import autoTable from 'jspdf-autotable'
-  import { computed, ref } from 'vue'
+  import { computed, onMounted, ref } from 'vue'
 
   const periodo = ref('Todos')
   const snackbar = ref(false)
@@ -16,25 +16,95 @@
     'Cuarto trimestre',
   ]
 
-  // Datos en integración con API.
-  // Más adelante se reemplazarán por estadísticas del backend.
-  const datos = [
-    { mes: 'Enero', trimestre: 'Primer trimestre', ingresos: 3200, gastos: 2100 },
-    { mes: 'Febrero', trimestre: 'Primer trimestre', ingresos: 3900, gastos: 2500 },
-    { mes: 'Marzo', trimestre: 'Primer trimestre', ingresos: 3500, gastos: 2800 },
-    { mes: 'Abril', trimestre: 'Segundo trimestre', ingresos: 4600, gastos: 3100 },
-    { mes: 'Mayo', trimestre: 'Segundo trimestre', ingresos: 4200, gastos: 2900 },
-    { mes: 'Junio', trimestre: 'Segundo trimestre', ingresos: 5100, gastos: 3400 },
-    { mes: 'Julio', trimestre: 'Tercer trimestre', ingresos: 4800, gastos: 3600 },
-    { mes: 'Agosto', trimestre: 'Tercer trimestre', ingresos: 5600, gastos: 3800 },
-    { mes: 'Septiembre', trimestre: 'Tercer trimestre', ingresos: 5900, gastos: 4100 },
-    { mes: 'Octubre', trimestre: 'Cuarto trimestre', ingresos: 6200, gastos: 4300 },
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+  const datos = ref([])
+  const cargando = ref(false)
+
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
   ]
+
+  const trimestres = [
+    'Primer trimestre',
+    'Segundo trimestre',
+    'Tercer trimestre',
+    'Cuarto trimestre',
+  ]
+
+  function esIngreso (transaccion) {
+    const tipo = String(transaccion?.type || '').toLowerCase()
+    return tipo === 'ingreso' || tipo === 'income'
+  }
+
+  function extraerLista (datos) {
+    if (Array.isArray(datos?.data)) return datos.data
+    if (Array.isArray(datos)) return datos
+    return []
+  }
+
+  async function cargarReportes () {
+    cargando.value = true
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      const respuesta = await fetch(`${API_BASE}/transactions`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!respuesta.ok) return
+
+      const contenido = await respuesta.json()
+      const transacciones = extraerLista(contenido)
+      const meses = new Map()
+
+      for (const transaccion of transacciones) {
+        const fecha = new Date(transaccion.date)
+        if (Number.isNaN(fecha.getTime())) continue
+
+        const indice = fecha.getMonth()
+
+        if (!meses.has(indice)) {
+          meses.set(indice, {
+            mes: nombresMeses[indice],
+            trimestre: trimestres[Math.floor(indice / 3)],
+            ingresos: 0,
+            gastos: 0,
+          })
+        }
+
+        const registro = meses.get(indice)
+        const monto = Number(transaccion.amount) || 0
+
+        if (esIngreso(transaccion)) {
+          registro.ingresos += monto
+        } else {
+          registro.gastos += monto
+        }
+      }
+
+      datos.value = [...meses.entries()]
+        .sort(([mesA], [mesB]) => mesA - mesB)
+        .map(([, registro]) => registro)
+    } catch (error) {
+      console.error('Error al cargar los reportes:', error)
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  onMounted(() => {
+    cargarReportes()
+  })
 
   const registros = computed(() =>
     periodo.value === 'Todos'
-      ? datos
-      : datos.filter(item => item.trimestre === periodo.value),
+      ? datos.value
+      : datos.value.filter(item => item.trimestre === periodo.value),
   )
 
   const totalIngresos = computed(() =>
@@ -54,6 +124,15 @@
     }).format(valor)
   }
 
+  function filasReporte () {
+    return registros.value.map(item => ({
+      Mes: item.mes,
+      Ingresos: item.ingresos,
+      Gastos: item.gastos,
+      Balance: item.ingresos - item.gastos,
+    }))
+  }
+
   async function exportarExcel () {
     try {
       const libro = new ExcelJS.Workbook()
@@ -66,6 +145,7 @@
       // COLORES DEL REPORTE
       const azulOscuro = '172554'
       const azul = '2563EB'
+      const azulClaro = 'DBEAFE'
       const grisClaro = 'F1F5F9'
       const blanco = 'FFFFFF'
       const grisTexto = '475569'
@@ -474,9 +554,7 @@
       documento.setFontSize(10)
       documento.setTextColor(100, 116, 139)
       documento.text(`Período: ${periodo.value}`, 14, 39)
-      documento.text('Módulo en integración con API (Sprint 4)', 14, 45)
-
-      let posicionFinal = 54
+      documento.text('Datos reales de la plataforma', 14, 45)
 
       autoTable(documento, {
         startY: 54,
@@ -494,12 +572,9 @@
         styles: {
           fontSize: 10,
         },
-        didDrawPage: ({ table }) => {
-          posicionFinal = table.finalY ?? posicionFinal
-        },
       })
 
-      const posicion = posicionFinal + 14
+      const posicion = (documento as any).lastAutoTable.finalY + 14
 
       documento.setFontSize(11)
       documento.setTextColor(15, 23, 42)
