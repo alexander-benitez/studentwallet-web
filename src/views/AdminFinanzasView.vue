@@ -1,203 +1,294 @@
+<script setup lang="ts">
+  import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip,
+  } from 'chart.js'
+  import { computed, onMounted, ref } from 'vue'
+  import { Bar, Doughnut } from 'vue-chartjs'
+  import { useTheme } from 'vuetify'
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
-import { Bar, Doughnut } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-} from 'chart.js'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement
-)
-
-const theme = useTheme()
-
-const resumenMensual = ref([])
-
-const categorias = ref([])
-
-const totalIngresos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + Number(item.ingresos || 0),
-    0
+  ChartJS.register(
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    ArcElement,
   )
-)
 
-const totalGastos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + Number(item.gastos || 0),
-    0
-  )
-)
+  const theme = useTheme()
 
-const balance = computed(() =>
-  totalIngresos.value - totalGastos.value
-)
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const porcentajeAhorro = computed(() =>
-  totalIngresos.value > 0
-    ? (balance.value / totalIngresos.value) * 100
-    : 0
-)
+  const transacciones = ref([])
+  const usuarios = ref([])
+  const cargando = ref(false)
 
-const graficoBarras = computed(() => ({
-  labels: resumenMensual.value.map(item => item.mes),
-  datasets: [
-    {
-      label: 'Ingresos',
-      data: resumenMensual.value.map(item => item.ingresos),
-      backgroundColor: '#2563EB',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-    {
-      label: 'Gastos',
-      data: resumenMensual.value.map(item => item.gastos),
-      backgroundColor: '#7C3AED',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-  ],
-}))
+  const nombresMeses = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  ]
 
-const graficoCategorias = computed(() => ({
-  labels: categorias.value.map(item => item.name),
-  datasets: [
-    {
-      data: categorias.value.map(item => item.amount),
-      backgroundColor: categorias.value.map(item => item.color),
-      borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
-      borderWidth: 2,
-      hoverOffset: 8,
-    },
-  ],
-}))
+  const coloresCategorias = [
+    '#2563EB', '#7C3AED', '#10B981', '#F59E0B', '#EF4444',
+    '#EC4899', '#06B6D4', '#64748B',
+  ]
 
-const opcionesBarras = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
-  const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
-
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 20,
-        },
-      },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-        borderColor: colorCuadricula,
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: colorTexto,
-          callback: value => '$' + value.toLocaleString(),
-        },
-        grid: {
-          color: colorCuadricula,
-        },
-      },
-      x: {
-        ticks: {
-          color: colorTexto,
-        },
-        grid: {
-          display: false,
-        },
-      },
-    },
+  function esIngreso (transaccion) {
+    const tipo = String(transaccion?.type || '').toLowerCase()
+    return tipo === 'ingreso' || tipo === 'income'
   }
-})
 
-const opcionesCategorias = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
-
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '72%',
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 15,
-        },
-      },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-      },
-    },
+  function extraerLista (datos) {
+    if (Array.isArray(datos?.data)) return datos.data
+    if (Array.isArray(datos)) return datos
+    return []
   }
-})
 
-onMounted(async () => {
-  try {
-    const token = localStorage.getItem('auth_token')
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  const resumenMensual = computed(() => {
+    const meses = nombresMeses.map(mes => ({ mes, ingresos: 0, gastos: 0 }))
 
-    const response = await fetch(`${API_BASE}/admin/reports`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    })
+    for (const transaccion of transacciones.value) {
+      const fecha = new Date(transaccion.date)
+      if (Number.isNaN(fecha.getTime())) continue
 
-    const json = await response.json()
+      const monto = Number(transaccion.amount) || 0
+      const registro = meses[fecha.getMonth()]
 
-    if (response.ok && json.data) {
-      resumenMensual.value = json.data.monthly ?? []
-      categorias.value = json.data.categories ?? []
+      if (esIngreso(transaccion)) {
+        registro.ingresos += monto
+      } else {
+        registro.gastos += monto
+      }
     }
-  } catch (error) {
-    console.error('Error al cargar finanzas administrativas:', error)
+
+    return meses.filter(mes => mes.ingresos > 0 || mes.gastos > 0)
+  })
+
+  const categorias = computed(() => {
+    const totales = {}
+
+    for (const transaccion of transacciones.value) {
+      if (esIngreso(transaccion)) continue
+
+      const nombre = transaccion.category?.name || transaccion.category?.nombre || 'Otros'
+      const monto = Number(transaccion.amount) || 0
+
+      totales[nombre] = (totales[nombre] || 0) + monto
+    }
+
+    return Object.entries(totales).map(([nombre, monto], indice) => ({
+      nombre,
+      monto,
+      color: coloresCategorias[indice % coloresCategorias.length],
+    }))
+  })
+
+  const totalIngresos = computed(() =>
+    transacciones.value
+      .filter(t => esIngreso(t))
+      .reduce(
+        (total, transaccion) => total + (Number(transaccion.amount) || 0),
+        0,
+      ),
+  )
+
+  const totalGastos = computed(() =>
+    transacciones.value
+      .filter(transaccion => !esIngreso(transaccion))
+      .reduce(
+        (total, transaccion) => total + (Number(transaccion.amount) || 0),
+        0,
+      ),
+  )
+
+  const balance = computed(() =>
+    totalIngresos.value - totalGastos.value,
+  )
+
+  const porcentajeAhorro = computed(() =>
+    totalIngresos.value > 0
+      ? (balance.value / totalIngresos.value) * 100
+      : 0,
+  )
+
+  const totalUsuarios = computed(() => usuarios.value.length)
+
+  const graficoBarras = computed(() => ({
+    labels: resumenMensual.value.map(item => item.mes),
+    datasets: [
+      {
+        label: 'Ingresos',
+        data: resumenMensual.value.map(item => item.ingresos),
+        backgroundColor: '#2563EB',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+      {
+        label: 'Gastos',
+        data: resumenMensual.value.map(item => item.gastos),
+        backgroundColor: '#7C3AED',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+    ],
+  }))
+
+  const graficoCategorias = computed(() => ({
+    labels: categorias.value.map(item => item.nombre),
+    datasets: [
+      {
+        data: categorias.value.map(item => Number(item.monto)),
+        backgroundColor: categorias.value.map(item => item.color),
+        borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
+        borderWidth: 2,
+        hoverOffset: 8,
+      },
+    ],
+  }))
+
+  // Opciones del gráfico de barras adaptadas al tema.
+  const opcionesBarras = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+    const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 20,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+          borderColor: colorCuadricula,
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: colorTexto,
+            callback: value => '$' + value.toLocaleString(),
+          },
+          grid: {
+            color: colorCuadricula,
+          },
+        },
+        x: {
+          ticks: {
+            color: colorTexto,
+          },
+          grid: {
+            display: false,
+          },
+        },
+      },
+    }
+  })
+
+  // Opciones del gráfico circular adaptadas al tema.
+  const opcionesCategorias = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 15,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+        },
+      },
+    }
+  })
+
+  async function cargarFinanzas () {
+    cargando.value = true
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      const headers = {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      }
+
+      const [respuestaTransacciones, respuestaUsuarios] = await Promise.all([
+        fetch(`${API_BASE}/transactions`, { headers }),
+        fetch(`${API_BASE}/admin/users`, { headers }),
+      ])
+
+      if (respuestaTransacciones.ok) {
+        const datos = await respuestaTransacciones.json()
+        const lista = extraerLista(datos)
+
+        transacciones.value = lista.map(transaccion => ({
+          ...transaccion,
+          amount: Number(transaccion.amount) || 0,
+        }))
+      }
+
+      if (respuestaUsuarios.ok) {
+        const datos = await respuestaUsuarios.json()
+        usuarios.value = extraerLista(datos)
+      }
+    } catch (error) {
+      console.error('Error al cargar las finanzas:', error)
+    } finally {
+      cargando.value = false
+    }
   }
-})
 
-function dinero(valor) {
-  return new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-}
+  onMounted(() => {
+    cargarFinanzas()
+  })
+
+  defineExpose({
+    cargarFinanzas,
+    totalUsuarios,
+    usuarios,
+  })
+
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
+  }
 </script>
-
 
 <template>
   <div class="finanzas-admin">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
@@ -216,7 +307,7 @@ function dinero(valor) {
 
     <!-- INDICADORES -->
     <v-row class="mt-5">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon blue">
             <v-icon color="primary" size="26">
@@ -231,7 +322,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon purple">
             <v-icon color="#7C3AED" size="26">
@@ -246,7 +337,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon green">
             <v-icon color="success" size="26">
@@ -261,7 +352,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon orange">
             <v-icon color="warning" size="26">
@@ -376,9 +467,9 @@ function dinero(valor) {
 
     <v-alert
       class="mt-5"
+      rounded="lg"
       type="info"
       variant="tonal"
-      rounded="lg"
     >
       Este panel utiliza información ficticia para demostrar
       cómo funcionaría la supervisión financiera.

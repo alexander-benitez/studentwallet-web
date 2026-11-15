@@ -1,231 +1,203 @@
+<script setup lang="ts">
+  import { computed, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
+  const dialog = ref(false)
+  const dialogEliminar = ref(false)
+  const presupuestoEliminar = ref(null)
+  const form = ref(null)
 
-const dialog = ref(false)
-const dialogEliminar = ref(false)
-const presupuestoEliminar = ref(null)
-const form = ref(null)
+  const categoria = ref(null)
+  const limite = ref(null)
+  const mes = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
+  const mesSeleccionado = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
 
-const categoria = ref(null)
-const limite = ref(null)
-const mes = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
-const mesSeleccionado = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
+  const menuMes = ref(false)
+  const menuMesFormulario = ref(false)
 
-const menuMes = ref(false)
-const menuMesFormulario = ref(false)
+  const anioSelector = ref(Number(mesSeleccionado.value.slice(0, 4)))
+  const anioFormulario = ref(Number(mes.value.slice(0, 4)))
 
-const anioSelector = ref(Number(mesSeleccionado.value.slice(0, 4)))
-const anioFormulario = ref(Number(mes.value.slice(0, 4)))
+  const meses = [
+    { nombre: 'Enero', valor: '01' },
+    { nombre: 'Febrero', valor: '02' },
+    { nombre: 'Marzo', valor: '03' },
+    { nombre: 'Abril', valor: '04' },
+    { nombre: 'Mayo', valor: '05' },
+    { nombre: 'Junio', valor: '06' },
+    { nombre: 'Julio', valor: '07' },
+    { nombre: 'Agosto', valor: '08' },
+    { nombre: 'Septiembre', valor: '09' },
+    { nombre: 'Octubre', valor: '10' },
+    { nombre: 'Noviembre', valor: '11' },
+    { nombre: 'Diciembre', valor: '12' },
+  ]
 
-const meses = [
-  { nombre: 'Enero', valor: '01' },
-  { nombre: 'Febrero', valor: '02' },
-  { nombre: 'Marzo', valor: '03' },
-  { nombre: 'Abril', valor: '04' },
-  { nombre: 'Mayo', valor: '05' },
-  { nombre: 'Junio', valor: '06' },
-  { nombre: 'Julio', valor: '07' },
-  { nombre: 'Agosto', valor: '08' },
-  { nombre: 'Septiembre', valor: '09' },
-  { nombre: 'Octubre', valor: '10' },
-  { nombre: 'Noviembre', valor: '11' },
-  { nombre: 'Diciembre', valor: '12' },
-]
+  function nombreMes (valor) {
+    if (!valor) return 'Seleccionar mes'
 
-function nombreMes(valor) {
-  if (!valor) return 'Seleccionar mes'
+    const [anio, numeroMes] = valor.split('-')
+    const mesEncontrado = meses.find(m => m.valor === numeroMes)
 
-  const [anio, numeroMes] = valor.split('-')
-  const mesEncontrado = meses.find(m => m.valor === numeroMes)
+    return mesEncontrado
+      ? `${mesEncontrado.nombre} ${anio}`
+      : valor
+  }
 
-  return mesEncontrado ? `${mesEncontrado.nombre} ${anio}` : valor
-}
+  function seleccionarMes (valor) {
+    mesSeleccionado.value = `${anioSelector.value}-${valor}`
+    menuMes.value = false
+  }
 
-function abrirSelectorMes() {
-  anioSelector.value = Number(mesSeleccionado.value.slice(0, 4))
-  menuMes.value = true
-}
+  function seleccionarMesFormulario (valor) {
+    mes.value = `${anioFormulario.value}-${valor}`
+    menuMesFormulario.value = false
+  }
 
-function seleccionarMes(valor) {
-  mesSeleccionado.value = `${anioSelector.value}-${valor}`
-  menuMes.value = false
-}
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorAlerta = ref('success')
 
-function abrirSelectorMesFormulario() {
-  anioFormulario.value = Number(mes.value.slice(0, 4))
-  menuMesFormulario.value = true
-}
+  const categorias = [
+    { title: 'Alimentación', icon: 'mdi-food', color: '#F59E0B' },
+    { title: 'Transporte', icon: 'mdi-bus', color: '#2563EB' },
+    { title: 'Educación', icon: 'mdi-school', color: '#7C3AED' },
+    { title: 'Entretenimiento', icon: 'mdi-gamepad-variant', color: '#EC4899' },
+    { title: 'Salud', icon: 'mdi-medical-bag', color: '#10B981' },
+    { title: 'Compras', icon: 'mdi-shopping', color: '#06B6D4' },
+    { title: 'Otros', icon: 'mdi-dots-horizontal-circle', color: '#64748B' },
+  ]
 
-function seleccionarMesFormulario(valor) {
-  mes.value = `${anioFormulario.value}-${valor}`
-  menuMesFormulario.value = false
-}
+  const presupuestosMes = computed(() =>
+    (finanzas?.presupuestos || [])
+      .filter(p => p.month === mesSeleccionado.value)
+      .map(p => {
+        const gastado = (finanzas?.movimientos || [])
+          .filter(m =>
+            m.type === 'expense'
+            && m.category === p.category
+            && m.date?.startsWith(p.month),
+          )
+          .reduce((total, m) => total + Number(m.amount), 0)
 
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorAlerta = ref('success')
+        const porcentaje = p.limit > 0
+          ? (gastado / p.limit) * 100
+          : 0
 
-const categoriasPresupuesto = computed(() =>
-  (finanzas?.categorias || [])
-    .filter(categoria => String(categoria.tipo ?? categoria.type) === 'gasto')
-    .map(categoria => ({
-      id: categoria.id,
-      title: categoria.nombre ?? categoria.name,
-      icon: categoria.icono ?? categoria.icon ?? 'mdi-tag-outline',
-      color: categoria.color ?? '#2563EB',
-    }))
-)
+        const info = categorias.find(c => c.title === p.category)
 
-const presupuestosMes = computed(() => {
-  const [anio, numeroMes] = mesSeleccionado.value.split('-')
-  const monthKey = `${anio}-${String(numeroMes).padStart(2, '0')}`
+        return {
+          ...p,
+          gastado,
+          disponible: Math.max(0, p.limit - gastado),
+          porcentaje,
+          icon: info?.icon || 'mdi-wallet',
+          color: info?.color || '#2563EB',
+        }
+      }),
+  )
 
-  return (finanzas?.presupuestos || [])
-    .filter(presupuesto => `${presupuesto.year}-${String(presupuesto.month).padStart(2, '0')}` === monthKey)
-    .map(presupuesto => {
-      const gastado = (finanzas?.movimientos || [])
-        .filter(movimiento =>
-          movimiento.type === 'gasto'
-          && String(movimiento.category?.id) === String(presupuesto.category_id)
-          && String(movimiento.date || '').startsWith(monthKey)
-        )
-        .reduce((total, movimiento) => total + Number(movimiento.amount || 0), 0)
+  const totalPresupuestado = computed(() =>
+    presupuestosMes.value.reduce((total, p) => total + Number(p.limit), 0),
+  )
 
-      const limit = Number(presupuesto.amount ?? presupuesto.limit ?? 0)
-      const porcentaje = limit > 0 ? (gastado / limit) * 100 : 0
-      const categoria = presupuesto.category
-      const categoriaNombre = categoria?.name ?? categoria?.nombre ?? 'Sin categoría'
+  const totalGastado = computed(() =>
+    presupuestosMes.value.reduce((total, p) => total + p.gastado, 0),
+  )
 
-      return {
-        ...presupuesto,
-        id: presupuesto.id,
-        category: categoriaNombre,
-        category_id: presupuesto.category_id,
-        limit,
-        gastado,
-        disponible: Math.max(0, limit - gastado),
-        porcentaje,
-        icon: categoria?.icono ?? categoria?.icon ?? 'mdi-wallet-outline',
-        color: categoria?.color ?? '#2563EB',
-      }
+  const disponibles = computed(() =>
+    Math.max(0, totalPresupuestado.value - totalGastado.value),
+  )
+
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
+  }
+
+  function obligatorio (v) {
+    return !!v || 'Este campo es obligatorio'
+  }
+
+  function limiteValido (v) {
+    return (Number.isFinite(Number(v)) && Number(v) > 0)
+      || 'Ingresa un límite mayor a cero'
+  }
+
+  function colorProgreso (porcentaje) {
+    if (porcentaje >= 100) return 'error'
+    if (porcentaje >= 80) return 'warning'
+    return 'success'
+  }
+
+  function estadoPresupuesto (porcentaje) {
+    if (porcentaje >= 100) return 'Límite superado'
+    if (porcentaje >= 80) return 'Cerca del límite'
+    return 'Bajo control'
+  }
+
+  function abrirFormulario () {
+    categoria.value = null
+    limite.value = null
+    mes.value = mesSeleccionado.value
+    anioFormulario.value = Number(mes.value.slice(0, 4))
+    dialog.value = true
+  }
+
+  async function guardar () {
+    const resultado = await form.value.validate()
+    if (!resultado.valid) return
+
+    finanzas?.guardarPresupuesto({
+      category: categoria.value,
+      month: mes.value,
+      limit: Number(limite.value),
     })
-})
 
-const totalPresupuestado = computed(() =>
-  presupuestosMes.value.reduce((total, presupuesto) => total + Number(presupuesto.limit || 0), 0)
-)
-
-const totalGastado = computed(() =>
-  presupuestosMes.value.reduce((total, presupuesto) => total + Number(presupuesto.gastado || 0), 0)
-)
-
-const disponibles = computed(() =>
-  Math.max(0, totalPresupuestado.value - totalGastado.value)
-)
-
-const dinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-
-const obligatorio = v => !!v || 'Este campo es obligatorio'
-
-const limiteValido = v =>
-  (Number.isFinite(Number(v)) && Number(v) > 0) || 'Ingresa un límite mayor a cero'
-
-function colorProgreso(porcentaje) {
-  if (porcentaje >= 100) return 'error'
-  if (porcentaje >= 80) return 'warning'
-  return 'success'
-}
-
-function estadoPresupuesto(porcentaje) {
-  if (porcentaje >= 100) return 'Límite superado'
-  if (porcentaje >= 80) return 'Cerca del límite'
-  return 'Bajo control'
-}
-
-function abrirFormulario() {
-  categoria.value = null
-  limite.value = null
-  mes.value = mesSeleccionado.value
-  anioFormulario.value = Number(mes.value.slice(0, 4))
-  dialog.value = true
-}
-
-async function guardar() {
-  const resultado = await form.value.validate()
-  if (!resultado.valid) return
-
-  const [anio, numeroMes] = mes.value.split('-')
-
-  const res = await finanzas?.guardarPresupuesto({
-    category_id: categoria.value,
-    amount: Number(limite.value),
-    month: Number(numeroMes),
-    year: Number(anio),
-  })
-
-  mesSeleccionado.value = mes.value
-
-  if (res?.ok) {
+    mesSeleccionado.value = mes.value
     dialog.value = false
+
     mensaje.value = 'Presupuesto guardado correctamente'
     colorAlerta.value = 'success'
     snackbar.value = true
-  } else {
-    dialog.value = true
-    mensaje.value = res?.mensaje || 'No se pudo guardar el presupuesto.'
-    colorAlerta.value = 'error'
-    snackbar.value = true
   }
-}
 
-function confirmarEliminar(presupuesto) {
-  presupuestoEliminar.value = presupuesto
-  dialogEliminar.value = true
-}
+  function confirmarEliminar (presupuesto) {
+    presupuestoEliminar.value = presupuesto
+    dialogEliminar.value = true
+  }
 
-async function eliminar() {
-  if (!presupuestoEliminar.value) return
+  function eliminar () {
+    if (!presupuestoEliminar.value) return
 
-  const res = await finanzas?.eliminarPresupuesto(presupuestoEliminar.value.id)
+    finanzas?.eliminarPresupuesto(
+      presupuestoEliminar.value.category,
+      presupuestoEliminar.value.month,
+    )
 
-  if (res?.ok) {
     dialogEliminar.value = false
     presupuestoEliminar.value = null
+
     mensaje.value = 'Presupuesto eliminado correctamente'
     colorAlerta.value = 'success'
     snackbar.value = true
   }
-}
-
-onMounted(async () => {
-  await Promise.all([
-    finanzas?.cargarCategorias(),
-    finanzas?.cargarMovimientos(),
-    finanzas?.cargarBalance(),
-    finanzas?.cargarPresupuestos(Number(mesSeleccionado.value.split('-')[1]), Number(mesSeleccionado.value.split('-')[0])),
-  ])
-})
 </script>
 
 <template>
-  <v-container fluid class="budgets-page pa-4 pa-md-8">
+  <v-container class="budgets-page pa-4 pa-md-8" fluid>
     <div class="page-header">
       <div>
         <v-btn
+          class="mb-3"
+          color="primary"
           prepend-icon="mdi-arrow-left"
           variant="text"
-          color="primary"
-          class="mb-3"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
@@ -238,93 +210,91 @@ onMounted(async () => {
       <v-btn
         color="primary"
         prepend-icon="mdi-plus"
-        size="large"
         rounded="lg"
+        size="large"
         @click="abrirFormulario"
       >
         Nuevo presupuesto
       </v-btn>
     </div>
 
-    
-<div class="month-filter">
-  <v-icon color="primary">mdi-calendar-month-outline</v-icon>
+    <div class="month-filter">
+      <v-icon color="primary">mdi-calendar-month-outline</v-icon>
 
-  <span>Seleccionar mes</span>
+      <span>Seleccionar mes</span>
 
-  <v-menu
-    v-model="menuMes"
-    location="bottom start"
-    :close-on-content-click="false"
-    @update:model-value="valor => {
-      if (valor) {
-        anioSelector = Number(mesSeleccionado.slice(0, 4))
-      }
-    }"
-  >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        variant="tonal"
-        color="primary"
-        rounded="lg"
-        append-icon="mdi-chevron-down"
+      <v-menu
+        v-model="menuMes"
+        :close-on-content-click="false"
+        location="bottom start"
+        @update:model-value="valor => {
+          if (valor) {
+            anioSelector = Number(mesSeleccionado.slice(0, 4))
+          }
+        }"
       >
-        {{ nombreMes(mesSeleccionado) }}
-      </v-btn>
-    </template>
-
-    <v-card class="month-picker-card" elevation="8">
-      <div class="month-picker-header">
-        <v-btn
-          icon="mdi-chevron-left"
-          variant="text"
-          size="small"
-          @click="anioSelector--"
-        />
-
-        <strong>{{ anioSelector }}</strong>
-
-        <v-btn
-          icon="mdi-chevron-right"
-          variant="text"
-          size="small"
-          @click="anioSelector++"
-        />
-      </div>
-
-      <v-divider />
-
-      <v-row dense class="month-grid">
-        <v-col
-          v-for="item in meses"
-          :key="item.valor"
-          cols="4"
-        >
+        <template #activator="{ props }">
           <v-btn
-            block
+            v-bind="props"
+            append-icon="mdi-chevron-down"
+            color="primary"
             rounded="lg"
-            size="small"
-            :color="
-              mesSeleccionado === `${anioSelector}-${item.valor}`
-                ? 'primary'
-                : undefined
-            "
-            :variant="
-              mesSeleccionado === `${anioSelector}-${item.valor}`
-                ? 'flat'
-                : 'text'
-            "
-            @click="seleccionarMes(item.valor)"
+            variant="tonal"
           >
-            {{ item.nombre.slice(0, 3) }}
+            {{ nombreMes(mesSeleccionado) }}
           </v-btn>
-        </v-col>
-      </v-row>
-    </v-card>
-  </v-menu>
-</div>
+        </template>
 
+        <v-card class="month-picker-card" elevation="8">
+          <div class="month-picker-header">
+            <v-btn
+              icon="mdi-chevron-left"
+              size="small"
+              variant="text"
+              @click="anioSelector--"
+            />
+
+            <strong>{{ anioSelector }}</strong>
+
+            <v-btn
+              icon="mdi-chevron-right"
+              size="small"
+              variant="text"
+              @click="anioSelector++"
+            />
+          </div>
+
+          <v-divider />
+
+          <v-row class="month-grid" dense>
+            <v-col
+              v-for="item in meses"
+              :key="item.valor"
+              cols="4"
+            >
+              <v-btn
+                block
+                :color="
+                  mesSeleccionado === `${anioSelector}-${item.valor}`
+                    ? 'primary'
+                    : undefined
+                "
+                rounded="lg"
+                size="small"
+                :variant="
+                  mesSeleccionado === `${anioSelector}-${item.valor}`
+                    ? 'flat'
+                    : 'text'
+                "
+                @click="seleccionarMes(item.valor)"
+              >
+                {{ item.nombre.slice(0, 3) }}
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-menu>
+    </div>
 
     <!-- RESUMEN -->
     <v-row class="mt-5">
@@ -369,6 +339,7 @@ onMounted(async () => {
     <div class="section-heading">
       <div>
         <h2>Presupuestos por categoría</h2>
+
         <p>
           {{ presupuestosMes.length }}
           categorías configuradas para este mes
@@ -376,13 +347,13 @@ onMounted(async () => {
       </div>
     </div>
 
-    <v-row v-if="presupuestosMes.length">
+    <v-row v-if="presupuestosMes.length > 0">
       <v-col
         v-for="presupuesto in presupuestosMes"
         :key="presupuesto.category"
         cols="12"
-        md="6"
         lg="4"
+        md="6"
       >
         <v-card class="budget-card" elevation="0">
           <div class="budget-top">
@@ -403,10 +374,10 @@ onMounted(async () => {
             </div>
 
             <v-btn
-              icon="mdi-delete-outline"
               color="error"
-              variant="text"
+              icon="mdi-delete-outline"
               size="small"
+              variant="text"
               @click="confirmarEliminar(presupuesto)"
             />
           </div>
@@ -424,11 +395,11 @@ onMounted(async () => {
           </div>
 
           <v-progress-linear
-            :model-value="Math.min(presupuesto.porcentaje, 100)"
+            class="mt-4"
             :color="colorProgreso(presupuesto.porcentaje)"
             height="10"
+            :model-value="Math.min(presupuesto.porcentaje, 100)"
             rounded
-            class="mt-4"
           />
 
           <div class="progress-info">
@@ -447,10 +418,10 @@ onMounted(async () => {
 
           <v-alert
             v-if="presupuesto.porcentaje >= 100"
+            class="mt-4"
+            density="compact"
             type="error"
             variant="tonal"
-            density="compact"
-            class="mt-4"
           >
             Has superado tu presupuesto por
             {{ dinero(presupuesto.gastado - presupuesto.limit) }}.
@@ -458,16 +429,16 @@ onMounted(async () => {
 
           <v-alert
             v-else-if="presupuesto.porcentaje >= 80"
+            class="mt-4"
+            density="compact"
             type="warning"
             variant="tonal"
-            density="compact"
-            class="mt-4"
           >
             Estás cerca de alcanzar tu límite de gasto.
           </v-alert>
 
           <div class="budget-footer">
-            <v-icon size="18" color="success">
+            <v-icon color="success" size="18">
               mdi-wallet-outline
             </v-icon>
             Disponible: {{ dinero(presupuesto.disponible) }}
@@ -477,11 +448,12 @@ onMounted(async () => {
     </v-row>
 
     <v-card v-else class="empty-state" elevation="0">
-      <v-icon size="65" color="grey-lighten-1">
+      <v-icon color="grey-lighten-1" size="65">
         mdi-chart-donut
       </v-icon>
 
       <h3>Todavía no tienes presupuestos</h3>
+
       <p>
         Crea tu primer presupuesto y empieza a controlar tus gastos.
       </p>
@@ -498,7 +470,7 @@ onMounted(async () => {
 
     <!-- FORMULARIO -->
     <v-dialog v-model="dialog" max-width="490">
-      <v-card rounded="xl" class="dialog-card">
+      <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-title">
           <div>
             <h3>Nuevo presupuesto</h3>
@@ -515,122 +487,124 @@ onMounted(async () => {
         <v-card-text>
           <v-form ref="form" @submit.prevent="guardar">
             <label>Categoría</label>
+
             <v-select
               v-model="categoria"
-              :items="categoriasPresupuesto"
+              class="mt-2 mb-2"
               item-title="title"
-              item-value="id"
+              item-value="title"
+              :items="categorias"
               placeholder="Selecciona una categoría"
               prepend-inner-icon="mdi-shape-outline"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio]"
-              class="mt-2 mb-2"
+              variant="outlined"
             />
 
             <label>Límite mensual (USD)</label>
+
             <v-text-field
               v-model="limite"
-              type="number"
+              class="mt-2 mb-2"
               min="0.01"
-              step="0.01"
               placeholder="Ej. 100"
               prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio, limiteValido]"
-              class="mt-2 mb-2"
+              step="0.01"
+              type="number"
+              variant="outlined"
             />
 
             <label>Mes</label>
 
-<v-menu
-  v-model="menuMesFormulario"
-  location="bottom start"
-  :close-on-content-click="false"
->
-  <template #activator="{ props }">
-    <v-btn
-      v-bind="props"
-      block
-      variant="outlined"
-      rounded="lg"
-      color="primary"
-      class="month-form-button mt-2 mb-3"
-      prepend-icon="mdi-calendar-month-outline"
-      append-icon="mdi-chevron-down"
-    >
-      {{ nombreMes(mes) }}
-    </v-btn>
-  </template>
+            <v-menu
+              v-model="menuMesFormulario"
+              :close-on-content-click="false"
+              location="bottom start"
+            >
+              <template #activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  append-icon="mdi-chevron-down"
+                  block
+                  class="month-form-button mt-2 mb-3"
+                  color="primary"
+                  prepend-icon="mdi-calendar-month-outline"
+                  rounded="lg"
+                  variant="outlined"
+                >
+                  {{ nombreMes(mes) }}
+                </v-btn>
+              </template>
 
-  <v-card class="month-picker-card" elevation="8">
-    <div class="month-picker-header">
-      <v-btn
-        icon="mdi-chevron-left"
-        variant="text"
-        size="small"
-        @click="anioFormulario--"
-      />
+              <v-card class="month-picker-card" elevation="8">
+                <div class="month-picker-header">
+                  <v-btn
+                    icon="mdi-chevron-left"
+                    size="small"
+                    variant="text"
+                    @click="anioFormulario--"
+                  />
 
-      <strong>{{ anioFormulario }}</strong>
+                  <strong>{{ anioFormulario }}</strong>
 
-      <v-btn
-        icon="mdi-chevron-right"
-        variant="text"
-        size="small"
-        @click="anioFormulario++"
-      />
-    </div>
+                  <v-btn
+                    icon="mdi-chevron-right"
+                    size="small"
+                    variant="text"
+                    @click="anioFormulario++"
+                  />
+                </div>
 
-    <v-divider />
+                <v-divider />
 
-    <v-row dense class="month-grid">
-      <v-col
-        v-for="item in meses"
-        :key="item.valor"
-        cols="4"
-      >
-        <v-btn
-          block
-          rounded="lg"
-          size="small"
-          :color="
-            mes === `${anioFormulario}-${item.valor}`
-              ? 'primary'
-              : undefined
-          "
-          :variant="
-            mes === `${anioFormulario}-${item.valor}`
-              ? 'flat'
-              : 'text'
-          "
-          @click="seleccionarMesFormulario(item.valor)"
-        >
-          {{ item.nombre.slice(0, 3) }}
-        </v-btn>
-      </v-col>
-    </v-row>
-  </v-card>
-</v-menu>
+                <v-row class="month-grid" dense>
+                  <v-col
+                    v-for="item in meses"
+                    :key="item.valor"
+                    cols="4"
+                  >
+                    <v-btn
+                      block
+                      :color="
+                        mes === `${anioFormulario}-${item.valor}`
+                          ? 'primary'
+                          : undefined
+                      "
+                      rounded="lg"
+                      size="small"
+                      :variant="
+                        mes === `${anioFormulario}-${item.valor}`
+                          ? 'flat'
+                          : 'text'
+                      "
+                      @click="seleccionarMesFormulario(item.valor)"
+                    >
+                      {{ item.nombre.slice(0, 3) }}
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card>
+            </v-menu>
 
             <v-alert
+              class="mb-5"
+              density="comfortable"
               type="info"
               variant="tonal"
-              density="comfortable"
-              class="mb-5"
             >
               Si ya existe un presupuesto para esta categoría
               y mes, se actualizará su límite.
             </v-alert>
 
             <v-btn
-              type="submit"
-              color="primary"
-              size="large"
               block
-              rounded="lg"
+              color="primary"
               prepend-icon="mdi-content-save-outline"
+              rounded="lg"
+              size="large"
+              type="submit"
             >
               Guardar presupuesto
             </v-btn>
@@ -641,12 +615,13 @@ onMounted(async () => {
 
     <!-- ELIMINAR -->
     <v-dialog v-model="dialogEliminar" max-width="400">
-      <v-card rounded="xl" class="delete-dialog">
-        <v-icon size="48" color="error">
+      <v-card class="delete-dialog" rounded="xl">
+        <v-icon color="error" size="48">
           mdi-delete-alert-outline
         </v-icon>
 
         <h3>¿Eliminar presupuesto?</h3>
+
         <p>
           Se eliminará el presupuesto de
           <strong>{{ presupuestoEliminar?.category }}</strong>.
@@ -655,8 +630,8 @@ onMounted(async () => {
 
         <div class="delete-actions">
           <v-btn
-            variant="outlined"
             rounded="lg"
+            variant="outlined"
             @click="dialogEliminar = false"
           >
             Cancelar

@@ -1,181 +1,141 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const busqueda = ref('')
-const filtroEstado = ref('Todos')
-const filtroCategoria = ref('Todas')
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorSnackbar = ref('success')
+  const busqueda = ref('')
+  const filtroEstado = ref('Todos')
+  const filtroCategoria = ref('Todas')
+  const snackbar = ref(false)
+  const mensaje = ref('')
 
-const estados = [
-  'Pendiente',
-  'En revisión',
-  'Resuelto',
-]
+  const estados = [
+    'Pendiente',
+    'En revisión',
+    'Resuelto',
+  ]
 
-const categorias = [
-  'Mejora',
-  'Reportar error',
-  'Nueva función',
-  'Opinión general',
-]
+  const categorias = [
+    'Mejora',
+    'Reportar error',
+    'Nueva función',
+    'Opinión general',
+  ]
 
-const etiquetasEstado = {
-  pendiente: 'Pendiente',
-  leida: 'En revisión',
-  resuelta: 'Resuelto',
-}
-
-const estadosApi = {
-  'Pendiente': 'pendiente',
-  'En revisión': 'leida',
-  'Resuelto': 'resuelta',
-}
-
-const comentarios = ref([])
-
-async function cargarSugerencias() {
-  try {
-    const respuesta = await fetch(`${API_BASE}/admin/suggestions`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    })
-
-    if (!respuesta.ok) return
-
-    const datos = await respuesta.json()
-
-    comentarios.value = (datos.data || []).map(item => {
-      const calificacion = Number(
-        (item.message || '').match(/\[Calificación:\s*(\d+)\s*\/\s*5\]/)?.[1]
-      ) || 0
-
-      return {
-        id: item.id,
-        usuario: item.user?.name || 'Usuario',
-        comentario: (item.message || '').replace(
-          /\[Calificación:\s*\d+\s*\/\s*5\]\s*/,
-          ''
-        ),
-        categoria: item.title || 'Opinión general',
-        estado: etiquetasEstado[item.status] || 'Pendiente',
-        fecha: item.created_at
-          ? new Date(item.created_at).toLocaleDateString('es-SV')
-          : '',
-        calificacion,
-      }
-    })
-  } catch (error) {
-    console.error('Error al cargar las sugerencias:', error)
+  const etiquetasEstado = {
+    pendiente: 'Pendiente',
+    leida: 'En revisión',
+    resuelta: 'Resuelto',
   }
-}
 
-const comentariosFiltrados = computed(() => {
-  return comentarios.value.filter((item) => {
-    const texto = busqueda.value.toLowerCase().trim()
+  const comentarios = ref([])
 
-    const coincideBusqueda =
-      String(item.usuario || '').toLowerCase().includes(texto) ||
-      String(item.comentario || '').toLowerCase().includes(texto)
+  async function cargarSugerencias () {
+    try {
+      const respuesta = await fetch(`${API_BASE}/admin/suggestions`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      })
 
-    const coincideEstado =
-      filtroEstado.value === 'Todos' ||
-      item.estado === filtroEstado.value
+      if (!respuesta.ok) return
 
-    const coincideCategoria =
-      filtroCategoria.value === 'Todas' ||
-      item.categoria === filtroCategoria.value
+      const datos = await respuesta.json()
 
-    return (
-      coincideBusqueda &&
-      coincideEstado &&
-      coincideCategoria
-    )
-  })
-})
+      comentarios.value = (datos.data || []).map(item => {
+        const calificacion = Number(
+          (item.message || '').match(/\[Calificación:\s*(\d+)\s*\/\s*5\]/)?.[1],
+        ) || 0
 
-const total = computed(() => comentarios.value.length)
-
-const pendientes = computed(() =>
-  comentarios.value.filter(
-    (item) => item.estado === 'Pendiente'
-  ).length
-)
-
-const enRevision = computed(() =>
-  comentarios.value.filter(
-    (item) => item.estado === 'En revisión'
-  ).length
-)
-
-const resueltos = computed(() =>
-  comentarios.value.filter(
-    (item) => item.estado === 'Resuelto'
-  ).length
-)
-
-async function cambiarEstado(id, nuevoEstado) {
-  const comentario = comentarios.value.find((item) => item.id === id)
-  const status = estadosApi[nuevoEstado]
-
-  if (!comentario || !status) return
-
-  const estadoAnterior = comentario.estado
-  comentario.estado = nuevoEstado
-
-  try {
-    const respuesta = await fetch(`${API_BASE}/admin/suggestions/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-      body: JSON.stringify({ status }),
-    })
-
-    const datos = await respuesta.json().catch(() => ({}))
-
-    if (!respuesta.ok) {
-      comentario.estado = estadoAnterior
-      mensaje.value = datos.message || 'No se pudo actualizar el estado.'
-      colorSnackbar.value = 'error'
-    } else {
-      comentario.estado = etiquetasEstado[datos.data?.status] || nuevoEstado
-      mensaje.value = datos.message || 'Estado actualizado correctamente.'
-      colorSnackbar.value = 'success'
+        return {
+          id: item.id,
+          usuario: item.user?.name || 'Usuario',
+          comentario: (item.message || '').replace(
+            /\[Calificación:\s*\d+\s*\/\s*5\]\s*/,
+            '',
+          ),
+          categoria: item.title || 'Opinión general',
+          estado: etiquetasEstado[item.status] || 'Pendiente',
+          fecha: item.created_at
+            ? new Date(item.created_at).toLocaleDateString('es-SV')
+            : '',
+          calificacion,
+        }
+      })
+    } catch (error) {
+      console.error('Error al cargar las sugerencias:', error)
     }
-  } catch (error) {
-    console.error('Error al actualizar el estado:', error)
-    comentario.estado = estadoAnterior
-    mensaje.value = 'Error de conexión al actualizar el estado.'
-    colorSnackbar.value = 'error'
   }
 
-  snackbar.value = true
-}
+  const comentariosFiltrados = computed(() => {
+    return comentarios.value.filter(item => {
+      const texto = busqueda.value.toLowerCase().trim()
 
-function colorEstado(estado) {
-  if (estado === 'Resuelto') return 'success'
-  if (estado === 'En revisión') return 'info'
-  return 'warning'
-}
+      const coincideBusqueda
+        = String(item.usuario || '').toLowerCase().includes(texto)
+          || String(item.comentario || '').toLowerCase().includes(texto)
 
-onMounted(() => {
-  cargarSugerencias()
-})
+      const coincideEstado
+        = filtroEstado.value === 'Todos'
+          || item.estado === filtroEstado.value
+
+      const coincideCategoria
+        = filtroCategoria.value === 'Todas'
+          || item.categoria === filtroCategoria.value
+
+      return (
+        coincideBusqueda
+        && coincideEstado
+        && coincideCategoria
+      )
+    })
+  })
+
+  const total = computed(() => comentarios.value.length)
+
+  const pendientes = computed(() =>
+    comentarios.value.filter(
+      item => item.estado === 'Pendiente',
+    ).length,
+  )
+
+  const enRevision = computed(() =>
+    comentarios.value.filter(
+      item => item.estado === 'En revisión',
+    ).length,
+  )
+
+  const resueltos = computed(() =>
+    comentarios.value.filter(
+      item => item.estado === 'Resuelto',
+    ).length,
+  )
+
+  function cambiarEstado (id, nuevoEstado) {
+    const comentario = comentarios.value.find(item => item.id === id)
+    if (comentario) comentario.estado = nuevoEstado
+
+    mensaje.value = 'Estado actualizado correctamente.'
+    snackbar.value = true
+  }
+
+  function colorEstado (estado) {
+    if (estado === 'Resuelto') return 'success'
+    if (estado === 'En revisión') return 'info'
+    return 'warning'
+  }
+
+  onMounted(() => {
+    cargarSugerencias()
+  })
 </script>
 
 <template>
   <div class="admin-comentarios">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
@@ -194,49 +154,53 @@ onMounted(() => {
 
     <!-- ESTADÍSTICAS -->
     <v-row class="mt-5">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon blue">
             <v-icon color="primary">
               mdi-message-text-outline
             </v-icon>
           </div>
+
           <p>Total de comentarios</p>
           <h2>{{ total }}</h2>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon orange">
             <v-icon color="warning">
               mdi-clock-outline
             </v-icon>
           </div>
+
           <p>Pendientes</p>
           <h2>{{ pendientes }}</h2>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon purple">
             <v-icon color="#7C3AED">
               mdi-eye-outline
             </v-icon>
           </div>
+
           <p>En revisión</p>
           <h2>{{ enRevision }}</h2>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon green">
             <v-icon color="success">
               mdi-check-circle-outline
             </v-icon>
           </div>
+
           <p>Resueltos</p>
           <h2>{{ resueltos }}</h2>
         </v-card>
@@ -248,6 +212,7 @@ onMounted(() => {
       <div class="section-header">
         <div>
           <h2>Bandeja de comentarios</h2>
+
           <p>
             {{ comentariosFiltrados?.length || 0 }}
             comentarios encontrados
@@ -263,37 +228,37 @@ onMounted(() => {
         <v-col cols="12" md="6">
           <v-text-field
             v-model="busqueda"
+            clearable
+            density="comfortable"
+            hide-details
             placeholder="Buscar por usuario o comentario..."
             prepend-inner-icon="mdi-magnify"
-            variant="outlined"
             rounded="lg"
-            density="comfortable"
-            hide-details
-            clearable
+            variant="outlined"
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="3">
+        <v-col cols="12" md="3" sm="6">
           <v-select
             v-model="filtroEstado"
-            :items="['Todos', ...estados]"
-            label="Estado"
-            variant="outlined"
-            rounded="lg"
             density="comfortable"
             hide-details
+            :items="['Todos', ...estados]"
+            label="Estado"
+            rounded="lg"
+            variant="outlined"
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="3">
+        <v-col cols="12" md="3" sm="6">
           <v-select
             v-model="filtroCategoria"
-            :items="['Todas', ...categorias]"
-            label="Categoría"
-            variant="outlined"
-            rounded="lg"
             density="comfortable"
             hide-details
+            :items="['Todas', ...categorias]"
+            label="Categoría"
+            rounded="lg"
+            variant="outlined"
           />
         </v-col>
       </v-row>
@@ -327,8 +292,8 @@ onMounted(() => {
 
           <v-chip
             :color="colorEstado(item.estado)"
-            variant="tonal"
             size="small"
+            variant="tonal"
           >
             {{ item.estado }}
           </v-chip>
@@ -336,8 +301,8 @@ onMounted(() => {
 
         <div class="comment-body">
           <v-chip
-            size="small"
             color="primary"
+            size="small"
             variant="outlined"
           >
             {{ item.categoria }}
@@ -347,12 +312,12 @@ onMounted(() => {
 
           <div class="rating">
             <v-rating
+              active-color="amber"
+              color="amber"
+              density="compact"
               :model-value="item.calificacion"
               readonly
-              density="compact"
               size="small"
-              color="amber"
-              active-color="amber"
             />
           </div>
         </div>
@@ -361,13 +326,13 @@ onMounted(() => {
           <span>Actualizar estado:</span>
 
           <v-select
-            :model-value="item.estado"
-            :items="estados"
-            variant="outlined"
-            density="compact"
-            rounded="lg"
-            hide-details
             class="status-select"
+            density="compact"
+            hide-details
+            :items="estados"
+            :model-value="item.estado"
+            rounded="lg"
+            variant="outlined"
             @update:model-value="
               cambiarEstado(item.id, $event)
             "
@@ -378,7 +343,7 @@ onMounted(() => {
 
     <v-snackbar
       v-model="snackbar"
-      :color="colorSnackbar"
+      color="success"
       location="top right"
       :timeout="3000"
     >

@@ -1,4 +1,3 @@
-
 /**
  * main.ts
  *
@@ -17,7 +16,6 @@ import App from './App.vue'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import '@/styles/theme.css'
-
 // Estilos
 import 'unfonts.css'
 

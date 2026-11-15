@@ -1,158 +1,154 @@
+<script setup lang="ts">
+  import { computed, ref } from 'vue'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const finanzas = useFinanzasStore()
 
-const finanzas = useFinanzasStore()
+  const tipoActivo = ref('expense')
+  const busqueda = ref('')
+  const dialogo = ref(false)
+  const dialogoEliminar = ref(false)
+  const editandoId = ref(null)
+  const categoriaEliminar = ref(null)
+  const formulario = ref(null)
 
-onMounted(() => {
-  finanzas?.cargarCategorias()
-})
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorMensaje = ref('success')
 
-const tipoActivo = ref('gasto')
-const busqueda = ref('')
-const dialogo = ref(false)
-const dialogoEliminar = ref(false)
-const editandoId = ref(null)
-const categoriaEliminar = ref(null)
-const formulario = ref(null)
+  const iconos = [
+    'mdi-tag-outline',
+    'mdi-food-outline',
+    'mdi-bus',
+    'mdi-school-outline',
+    'mdi-shopping-outline',
+    'mdi-home-outline',
+    'mdi-heart-outline',
+    'mdi-gamepad-variant-outline',
+    'mdi-cash-multiple',
+    'mdi-wallet-outline',
+    'mdi-briefcase-outline',
+    'mdi-gift-outline',
+    'mdi-piggy-bank-outline',
+    'mdi-laptop',
+  ]
 
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorMensaje = ref('success')
+  const colores = [
+    '#2563EB',
+    '#7C3AED',
+    '#10B981',
+    '#F59E0B',
+    '#EF4444',
+    '#EC4899',
+    '#06B6D4',
+    '#64748B',
+  ]
 
-const iconos = [
-  'mdi-tag-outline',
-  'mdi-food-outline',
-  'mdi-bus',
-  'mdi-school-outline',
-  'mdi-shopping-outline',
-  'mdi-home-outline',
-  'mdi-heart-outline',
-  'mdi-gamepad-variant-outline',
-  'mdi-cash-multiple',
-  'mdi-wallet-outline',
-  'mdi-briefcase-outline',
-  'mdi-gift-outline',
-  'mdi-piggy-bank-outline',
-  'mdi-laptop',
-]
-
-const colores = [
-  '#2563EB',
-  '#7C3AED',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#EC4899',
-  '#06B6D4',
-  '#64748B',
-]
-
-const datosIniciales = () => ({
-  nombre: '',
-  tipo: tipoActivo.value,
-  icono: 'mdi-tag-outline',
-  color: '#2563EB',
-})
-
-const categoriaForm = ref(datosIniciales())
-
-const reglas = [
-  valor => !!String(valor || '').trim() || 'El nombre es obligatorio',
-  valor => String(valor || '').trim().length <= 40 ||
-    'Máximo 40 caracteres',
-]
-
-const categoriasFiltradas = computed(() => {
-  const texto = String(busqueda.value || '').toLowerCase().trim()
-
-  return (finanzas?.categorias || []).filter(categoria =>
-    categoria.tipo === tipoActivo.value &&
-    categoria.nombre.toLowerCase().includes(texto)
-  )
-})
-
-const totalGastos = computed(() =>
-  (finanzas?.categorias || []).filter(c => c.tipo === 'gasto').length
-)
-
-const totalIngresos = computed(() =>
-  (finanzas?.categorias || []).filter(c => c.tipo === 'ingreso').length
-)
-
-function notificar(texto, color = 'success') {
-  mensaje.value = texto
-  colorMensaje.value = color
-  snackbar.value = true
-}
-
-function abrirCrear() {
-  editandoId.value = null
-  categoriaForm.value = datosIniciales()
-  dialogo.value = true
-}
-
-function abrirEditar(categoria) {
-  editandoId.value = categoria.id
-
-  categoriaForm.value = {
-    nombre: categoria.nombre,
-    tipo: categoria.tipo,
-    icono: categoria.icono,
-    color: categoria.color,
+  function datosIniciales () {
+    return {
+      nombre: '',
+      tipo: tipoActivo.value,
+      icono: 'mdi-tag-outline',
+      color: '#2563EB',
+    }
   }
 
-  dialogo.value = true
-}
+  const categoriaForm = ref(datosIniciales())
 
-async function guardarCategoria() {
-  const resultadoValidacion = await formulario.value.validate()
+  const reglas = [
+    valor => !!String(valor || '').trim() || 'El nombre es obligatorio',
+    valor => String(valor || '').trim().length <= 40
+      || 'Máximo 40 caracteres',
+  ]
 
-  if (!resultadoValidacion.valid) return
+  const categoriasFiltradas = computed(() => {
+    const texto = String(busqueda.value || '').toLowerCase().trim()
 
-  const resultado = editandoId.value
-    ? await finanzas?.editarCategoria(editandoId.value, categoriaForm.value)
-    : await finanzas?.agregarCategoria(categoriaForm.value)
+    return (finanzas?.categorias || []).filter(categoria =>
+      categoria.tipo === tipoActivo.value
+      && categoria.nombre.toLowerCase().includes(texto),
+    )
+  })
 
-  if (!resultado?.ok) {
-    notificar(resultado?.mensaje || 'No se pudo guardar la categoría.', 'error')
-    return
+  const totalGastos = computed(() =>
+    (finanzas?.categorias || []).filter(c => c.tipo === 'expense').length,
+  )
+
+  const totalIngresos = computed(() =>
+    (finanzas?.categorias || []).filter(c => c.tipo === 'income').length,
+  )
+
+  function notificar (texto, color = 'success') {
+    mensaje.value = texto
+    colorMensaje.value = color
+    snackbar.value = true
   }
 
-  tipoActivo.value = categoriaForm.value.tipo
-  dialogo.value = false
-  notificar(resultado.mensaje)
-}
+  function abrirCrear () {
+    editandoId.value = null
+    categoriaForm.value = datosIniciales()
+    dialogo.value = true
+  }
 
-function confirmarEliminar(categoria) {
-  categoriaEliminar.value = categoria
-  dialogoEliminar.value = true
-}
+  function abrirEditar (categoria) {
+    editandoId.value = categoria.id
 
-async function eliminarCategoria() {
-  if (!categoriaEliminar.value) return
+    categoriaForm.value = {
+      nombre: categoria.nombre,
+      tipo: categoria.tipo,
+      icono: categoria.icono,
+      color: categoria.color,
+    }
 
-  const resultado = await finanzas?.eliminarCategoria(
-    categoriaEliminar.value.id
-  )
+    dialogo.value = true
+  }
 
-  dialogoEliminar.value = false
+  async function guardarCategoria () {
+    const resultadoValidacion = await formulario.value.validate()
 
-  notificar(
-    resultado?.mensaje || 'No se pudo eliminar la categoría.',
-    resultado?.ok ? 'success' : 'error'
-  )
+    if (!resultadoValidacion.valid) return
 
-  categoriaEliminar.value = null
-}
+    const resultado = editandoId.value
+      ? finanzas?.editarCategoria(editandoId.value, categoriaForm.value)
+      : finanzas?.agregarCategoria(categoriaForm.value)
+
+    if (!resultado.ok) {
+      notificar(resultado.mensaje, 'error')
+      return
+    }
+
+    dialogo.value = false
+    notificar(resultado.mensaje)
+  }
+
+  function confirmarEliminar (categoria) {
+    categoriaEliminar.value = categoria
+    dialogoEliminar.value = true
+  }
+
+  function eliminarCategoria () {
+    if (!categoriaEliminar.value) return
+
+    const resultado = finanzas?.eliminarCategoria(
+      categoriaEliminar.value.id,
+    )
+
+    dialogoEliminar.value = false
+
+    notificar(
+      resultado.mensaje,
+      resultado.ok ? 'success' : 'error',
+    )
+
+    categoriaEliminar.value = null
+  }
 </script>
 
 <template>
   <div class="categorias-page">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Organización financiera
         </v-chip>
 
@@ -166,9 +162,9 @@ async function eliminarCategoria() {
 
       <v-btn
         color="primary"
-        size="large"
-        rounded="lg"
         prepend-icon="mdi-plus"
+        rounded="lg"
+        size="large"
         @click="abrirCrear"
       >
         Nueva categoría
@@ -224,18 +220,18 @@ async function eliminarCategoria() {
       <div class="filters">
         <v-btn-toggle
           v-model="tipoActivo"
-          mandatory
           color="primary"
-          variant="outlined"
-          rounded="lg"
           divided
+          mandatory
+          rounded="lg"
+          variant="outlined"
         >
-          <v-btn value="gasto">
+          <v-btn value="expense">
             <v-icon start>mdi-trending-down</v-icon>
             Gastos
           </v-btn>
 
-          <v-btn value="ingreso">
+          <v-btn value="income">
             <v-icon start>mdi-trending-up</v-icon>
             Ingresos
           </v-btn>
@@ -243,22 +239,22 @@ async function eliminarCategoria() {
 
         <v-text-field
           v-model="busqueda"
+          class="search-field"
+          clearable
+          density="comfortable"
+          hide-details
           placeholder="Buscar categoría..."
           prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          density="comfortable"
           rounded="lg"
-          hide-details
-          clearable
-          class="search-field"
+          variant="outlined"
         />
       </div>
 
       <v-alert
         v-if="categoriasFiltradas.length === 0"
+        class="mt-5"
         type="info"
         variant="tonal"
-        class="mt-5"
       >
         No se encontraron categorías. Puedes crear una nueva
         con el botón superior.
@@ -269,8 +265,8 @@ async function eliminarCategoria() {
           v-for="categoria in categoriasFiltradas"
           :key="categoria.id"
           cols="12"
-          sm="6"
           lg="4"
+          sm="6"
         >
           <v-card class="category-card" elevation="0">
             <div class="category-top">
@@ -293,8 +289,8 @@ async function eliminarCategoria() {
                   <v-btn
                     v-bind="props"
                     icon="mdi-dots-vertical"
-                    variant="text"
                     size="small"
+                    variant="text"
                   />
                 </template>
 
@@ -306,9 +302,9 @@ async function eliminarCategoria() {
                   />
 
                   <v-list-item
+                    base-color="error"
                     prepend-icon="mdi-delete-outline"
                     title="Eliminar categoría"
-                    base-color="error"
                     @click="confirmarEliminar(categoria)"
                   />
                 </v-list>
@@ -318,16 +314,16 @@ async function eliminarCategoria() {
             <h3>{{ categoria.nombre }}</h3>
 
             <v-chip
-              size="small"
-              variant="tonal"
+              class="mt-3"
               :color="
-                categoria.tipo === 'ingreso'
+                categoria.tipo === 'income'
                   ? 'success'
                   : 'primary'
               "
-              class="mt-3"
+              size="small"
+              variant="tonal"
             >
-              {{ categoria.tipo === 'ingreso' ? 'Ingreso' : 'Gasto' }}
+              {{ categoria.tipo === 'income' ? 'Ingreso' : 'Gasto' }}
             </v-chip>
           </v-card>
         </v-col>
@@ -336,7 +332,7 @@ async function eliminarCategoria() {
 
     <!-- FORMULARIO -->
     <v-dialog v-model="dialogo" max-width="540">
-      <v-card rounded="xl" class="dialog-card">
+      <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-title">
           {{ editandoId ? 'Editar categoría' : 'Nueva categoría' }}
         </v-card-title>
@@ -344,37 +340,37 @@ async function eliminarCategoria() {
         <v-card-text>
           <v-form ref="formulario" @submit.prevent="guardarCategoria">
             <!-- NOMBRE DE LA CATEGORÍA -->
-<div class="category-form-field">
-  <label class="form-label">Nombre de la categoría</label>
+            <div class="category-form-field">
+              <label class="form-label">Nombre de la categoría</label>
 
-  <v-text-field
-    v-model="categoriaForm.nombre"
-    placeholder="Ej. Servicios básicos"
-    variant="outlined"
-    rounded="lg"
-    counter="40"
-    maxlength="40"
-    :rules="reglas"
-    class="category-name-input"
-    hide-details="auto"
-  />
-</div>
+              <v-text-field
+                v-model="categoriaForm.nombre"
+                class="category-name-input"
+                counter="40"
+                hide-details="auto"
+                maxlength="40"
+                placeholder="Ej. Servicios básicos"
+                rounded="lg"
+                :rules="reglas"
+                variant="outlined"
+              />
+            </div>
 
-           <!-- TIPO DE CATEGORÍA -->
-<div class="category-form-field">
-  <label class="form-label">Tipo de categoría</label>
+            <!-- TIPO DE CATEGORÍA -->
+            <div class="category-form-field">
+              <label class="form-label">Tipo de categoría</label>
 
-  <v-select
-    v-model="categoriaForm.tipo"
-    :items="[
-      { title: 'Gasto', value: 'gasto' },
-      { title: 'Ingreso', value: 'ingreso' },
-    ]"
-    variant="outlined"
-    rounded="lg"
-    hide-details
-  />
-</div>
+              <v-select
+                v-model="categoriaForm.tipo"
+                hide-details
+                :items="[
+                  { title: 'Gasto', value: 'expense' },
+                  { title: 'Ingreso', value: 'income' },
+                ]"
+                rounded="lg"
+                variant="outlined"
+              />
+            </div>
 
             <p class="field-label">Selecciona un ícono</p>
 
@@ -382,11 +378,11 @@ async function eliminarCategoria() {
               <button
                 v-for="icono in iconos"
                 :key="icono"
-                type="button"
                 class="icon-option"
                 :class="{
                   'icon-selected': categoriaForm.icono === icono,
                 }"
+                type="button"
                 @click="categoriaForm.icono = icono"
               >
                 <v-icon size="23">
@@ -401,13 +397,13 @@ async function eliminarCategoria() {
               <button
                 v-for="color in colores"
                 :key="color"
-                type="button"
+                :aria-label="'Seleccionar color ' + color"
                 class="color-option"
                 :class="{
                   'color-selected': categoriaForm.color === color,
                 }"
                 :style="{ backgroundColor: color }"
-                :aria-label="'Seleccionar color ' + color"
+                type="button"
                 @click="categoriaForm.color = color"
               >
                 <v-icon
@@ -422,18 +418,18 @@ async function eliminarCategoria() {
 
             <div class="dialog-actions">
               <v-btn
-                variant="text"
                 rounded="lg"
+                variant="text"
                 @click="dialogo = false"
               >
                 Cancelar
               </v-btn>
 
               <v-btn
-                type="submit"
                 color="primary"
-                rounded="lg"
                 prepend-icon="mdi-content-save-outline"
+                rounded="lg"
+                type="submit"
               >
                 {{ editandoId ? 'Guardar cambios' : 'Crear categoría' }}
               </v-btn>
@@ -445,7 +441,7 @@ async function eliminarCategoria() {
 
     <!-- CONFIRMAR ELIMINACIÓN -->
     <v-dialog v-model="dialogoEliminar" max-width="430">
-      <v-card rounded="xl" class="dialog-card">
+      <v-card class="dialog-card" rounded="xl">
         <v-card-title>
           Eliminar categoría
         </v-card-title>
@@ -455,10 +451,10 @@ async function eliminarCategoria() {
           <strong>{{ categoriaEliminar?.nombre }}</strong>?
 
           <v-alert
-            type="warning"
-            variant="tonal"
             class="mt-4"
             density="comfortable"
+            type="warning"
+            variant="tonal"
           >
             No se podrá eliminar si tiene movimientos
             o presupuestos asociados.

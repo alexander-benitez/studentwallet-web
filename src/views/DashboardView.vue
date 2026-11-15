@@ -1,106 +1,40 @@
-<script setup>
-import { ref, computed, onMounted } from "vue"
-import { useRouter } from "vue-router"
-import { useFinanzasStore } from "@/stores/finanzas"
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
-const search = ref("")
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
+  const search = ref('')
 
-// Disparar peticiones a la API de Laravel al entrar a la vista
-onMounted(async () => {
-  await Promise.all([
-    finanzas?.cargarBalance(),
-    finanzas?.cargarMovimientos(),
-    finanzas?.cargarCategorias()
-  ])
-})
-
-// Mapeo reactivo compatible con el store y la API
-const transactions = computed(() => finanzas?.movimientos || [])
-const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_incomes ?? 0)
-const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_expenses ?? 0)
-const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.balance ?? 0)
-
-const filteredTransactions = computed(() =>
-  transactions.value.filter((t) => {
-    const texto = `${t.description || ""} ${t.category?.name || ""}`
-    return texto.toLowerCase().includes(search.value.toLowerCase())
-  })
-)
-
-const money = (value) =>
-  new Intl.NumberFormat("es-SV", {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(value) || 0)
-
-const dialog = ref(false)
-const dialogTipo = ref('ingreso')
-const form = ref(null)
-const concepto = ref('')
-const monto = ref(null)
-const categoria = ref(null)
-const fecha = ref(new Date().toLocaleDateString('en-CA'))
-const descripcion = ref('')
-const guardando = ref(false)
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorMensaje = ref('success')
-
-const categorias = computed(() =>
-  (finanzas?.categorias || [])
-    .filter(categoria => categoria.type === (dialogTipo.value === 'ingreso' ? 'ingreso' : 'gasto'))
-    .map(categoria => ({ title: categoria.name, value: categoria.id }))
-)
-
-const obligatorio = v =>
-  !!String(v ?? '').trim() || 'Este campo es obligatorio'
-
-const montoValido = v =>
-  (Number.isFinite(Number(v)) && Number(v) > 0) || 'Ingresa un monto mayor a cero'
-
-function abrirModal(tipo) {
-  dialogTipo.value = tipo
-  concepto.value = ''
-  monto.value = null
-  categoria.value = null
-  fecha.value = new Date().toLocaleDateString('en-CA')
-  descripcion.value = ''
-  form.value?.resetValidation()
-  dialog.value = true
-}
-
-async function guardarMovimiento() {
-  const resultado = await form.value.validate()
-
-  if (!resultado.valid) return
-
-  guardando.value = true
-
-  const res = await finanzas?.agregarMovimiento({
-    amount: Number(monto.value),
-    type: dialogTipo.value,
-    category_id: categoria.value,
-    description: concepto.value.trim(),
-    date: fecha.value,
+  // Disparar peticiones a la API de Laravel al entrar a la vista
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarBalance(),
+      finanzas?.cargarMovimientos(),
+      finanzas?.cargarCategorias(),
+    ])
   })
 
-  guardando.value = false
-  dialog.value = false
+  // Mapeo reactivo compatible con el store y la API
+  const transactions = computed(() => finanzas?.movimientos || [])
+  const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_incomes ?? 0)
+  const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_expenses ?? 0)
+  const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.balance ?? 0)
 
-  if (res?.ok) {
-    mensaje.value = dialogTipo.value === 'ingreso'
-      ? 'Ingreso registrado correctamente'
-      : 'Gasto registrado correctamente'
-    colorMensaje.value = 'success'
-    snackbar.value = true
-  } else {
-    mensaje.value = res?.message || 'Error al guardar el movimiento'
-    colorMensaje.value = 'error'
-    snackbar.value = true
+  const filteredTransactions = computed(() =>
+    transactions.value.filter(t => {
+      const texto = `${t.description || ''} ${t.category?.name || ''}`
+      return texto.toLowerCase().includes(search.value.toLowerCase())
+    }),
+  )
+
+  function money (value) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Number(value) || 0)
   }
-}
 </script>
 
 <template>
@@ -112,32 +46,24 @@ async function guardarMovimiento() {
           <v-icon size="16">mdi-sparkles</v-icon>
           Tu espacio financiero
         </div>
+
         <h1>¡Hola, {{ finanzas?.nombreCompleto }}! 👋</h1>
+
         <p>
           Aquí tienes un resumen de tus finanzas.
           Sigue avanzando hacia tus metas.
         </p>
       </div>
-      <v-btn
-        color="primary"
-        rounded="lg"
-        size="large"
-        prepend-icon="mdi-plus"
-        elevation="0"
-        @click="abrirModal('ingreso')"
-      >
-        Nuevo ingreso
-      </v-btn>
 
       <v-btn
         color="primary"
+        elevation="0"
+        prepend-icon="mdi-plus"
         rounded="lg"
         size="large"
-        prepend-icon="mdi-plus"
-        elevation="0"
-        @click="abrirModal('gasto')"
+        @click="router.push('/ingresos')"
       >
-        Nuevo gasto
+        Nuevo ingreso
       </v-btn>
     </div>
 
@@ -149,24 +75,30 @@ async function guardarMovimiento() {
             <span>Saldo disponible</span>
             <v-icon>mdi-wallet-outline</v-icon>
           </div>
+
           <h2>{{ money(balance) }}</h2>
+
           <div class="card-footer">
             <v-icon size="16">mdi-check-circle</v-icon>
             Balance actual
           </div>
-          <div class="card-decoration"></div>
+
+          <div class="card-decoration" />
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="finance-card" elevation="0">
           <div class="card-top">
             <span>Ingresos totales</span>
+
             <div class="stat-icon income-icon">
               <v-icon>mdi-arrow-down-left</v-icon>
             </div>
           </div>
+
           <h2>{{ money(income) }}</h2>
+
           <div class="card-footer text-success">
             <v-icon size="16">mdi-trending-up</v-icon>
             Dinero recibido
@@ -174,15 +106,18 @@ async function guardarMovimiento() {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="finance-card" elevation="0">
           <div class="card-top">
             <span>Gastos totales</span>
+
             <div class="stat-icon expense-icon">
               <v-icon>mdi-arrow-up-right</v-icon>
             </div>
           </div>
+
           <h2>{{ money(expenses) }}</h2>
+
           <div class="card-footer text-error">
             <v-icon size="16">mdi-trending-down</v-icon>
             Dinero utilizado
@@ -198,15 +133,16 @@ async function guardarMovimiento() {
           <h3>Movimientos recientes</h3>
           <p>Consulta tus últimas transacciones.</p>
         </div>
+
         <v-text-field
           v-model="search"
-          placeholder="Buscar movimiento..."
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
+          class="search-field"
           density="compact"
           hide-details
+          placeholder="Buscar movimiento..."
+          prepend-inner-icon="mdi-magnify"
           rounded="lg"
-          class="search-field"
+          variant="outlined"
         />
       </div>
 
@@ -219,6 +155,7 @@ async function guardarMovimiento() {
             <th class="text-right">Monto</th>
           </tr>
         </thead>
+
         <tbody>
           <tr
             v-for="transaction in filteredTransactions"
@@ -228,22 +165,26 @@ async function guardarMovimiento() {
               <div class="transaction-name">
                 <v-avatar
                   :color="transaction.type === 'ingreso' ? 'success' : 'error'"
-                  variant="tonal"
                   size="42"
+                  variant="tonal"
                 >
                   <v-icon>
                     {{ transaction.type === 'ingreso' ? 'mdi-arrow-down-left' : 'mdi-arrow-up-right' }}
                   </v-icon>
                 </v-avatar>
+
                 <strong>{{ transaction.description }}</strong>
               </div>
             </td>
+
             <td>
               <v-chip size="small" variant="tonal">
                 {{ transaction.category?.name }}
               </v-chip>
             </td>
+
             <td>{{ transaction.date }}</td>
+
             <td
               class="text-right font-weight-bold"
               :class="transaction.type === 'ingreso' ? 'text-success' : 'text-error'"
@@ -251,156 +192,15 @@ async function guardarMovimiento() {
               {{ transaction.type === 'ingreso' ? '+' : '-' }}{{ money(transaction.amount) }}
             </td>
           </tr>
+
           <tr v-if="filteredTransactions.length === 0">
-            <td colspan="4" class="text-center py-8">
+            <td class="text-center py-8" colspan="4">
               No se encontraron movimientos.
             </td>
           </tr>
         </tbody>
       </v-table>
     </v-card>
-
-    <!-- MODAL REGISTRAR MOVIMIENTO -->
-    <v-dialog v-model="dialog" max-width="530">
-      <v-card class="dialog-card" rounded="xl">
-        <v-card-title class="dialog-title">
-          <div>
-            <h3>{{ dialogTipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar gasto' }}</h3>
-            <p>Agrega una nueva {{ dialogTipo === 'ingreso' ? 'entrada de dinero' : 'salida de dinero' }}.</p>
-          </div>
-
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="dialog = false"
-          />
-        </v-card-title>
-
-        <v-card-text>
-          <v-form ref="form" @submit.prevent="guardarMovimiento">
-
-            <label>Concepto</label>
-
-            <v-text-field
-              v-model="concepto"
-              placeholder="Ej. Pago de trabajo"
-              prepend-inner-icon="mdi-text-box-outline"
-              variant="outlined"
-              rounded="lg"
-              :rules="[obligatorio]"
-              class="mt-2 mb-2"
-            />
-
-            <label>Monto (USD)</label>
-
-            <v-text-field
-              v-model="monto"
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="0.00"
-              prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
-              rounded="lg"
-              :rules="[obligatorio, montoValido]"
-              class="mt-2 mb-2"
-            />
-
-            <!-- CATEGORIA -->
-            <div class="form-field">
-              <label>Categoria</label>
-
-              <v-select
-                v-model="categoria"
-                :items="categorias"
-                placeholder="Selecciona una categoria"
-                prepend-inner-icon="mdi-shape-outline"
-                variant="outlined"
-                rounded="lg"
-                :rules="[obligatorio]"
-                class="mt-2"
-              />
-
-              <v-btn
-                to="/categorias"
-                variant="text"
-                color="primary"
-                size="small"
-                prepend-icon="mdi-plus-circle-outline"
-                class="category-button"
-              >
-                Administrar mis categorias
-              </v-btn>
-            </div>
-
-            <!-- FECHA -->
-            <div class="form-field">
-              <label>Fecha</label>
-
-              <v-text-field
-                v-model="fecha"
-                type="date"
-                variant="outlined"
-                rounded="lg"
-                :rules="[obligatorio]"
-                class="mt-2"
-              />
-            </div>
-
-            <label>Descripcion (opcional)</label>
-
-            <v-textarea
-              v-model="descripcion"
-              placeholder="Agrega detalles sobre este movimiento..."
-              variant="outlined"
-              rounded="lg"
-              rows="2"
-              class="mt-2"
-            />
-
-            <div class="dialog-actions">
-              <v-btn
-                variant="outlined"
-                rounded="lg"
-                @click="dialog = false"
-              >
-                Cancelar
-              </v-btn>
-
-              <v-btn
-                type="submit"
-                color="primary"
-                rounded="lg"
-                prepend-icon="mdi-content-save-outline"
-                :loading="guardando"
-              >
-                Guardar
-              </v-btn>
-            </div>
-
-          </v-form>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <!-- NOTIFICACION -->
-    <v-snackbar
-      v-model="snackbar"
-      :color="colorMensaje"
-      location="top right"
-      :timeout="3500"
-    >
-      {{ mensaje }}
-
-      <template #actions>
-        <v-btn
-          variant="text"
-          @click="snackbar = false"
-        >
-          Cerrar
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
