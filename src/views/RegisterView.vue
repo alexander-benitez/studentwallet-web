@@ -15,8 +15,11 @@
 
   const required = v => !!String(v ?? '').trim() || 'Este campo es obligatorio'
   function emailRule (v) {
-    return /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(String(v ?? '').trim())
-      || 'Ingresa un correo electrónico válido'
+    const value = String(v ?? '').trim()
+    if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(value)) {
+      return 'Ingresa un correo electrónico válido'
+    }
+    return value.endsWith('@gmail.com') || 'Solo se permiten correos @gmail.com'
   }
   function passwordRule (v) {
     return String(v ?? '').length >= 8 || 'La contraseña debe tener al menos 8 caracteres'

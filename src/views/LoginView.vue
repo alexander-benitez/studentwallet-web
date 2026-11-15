@@ -14,6 +14,11 @@
   const message = ref('')
   const color = ref('error')
 
+  const forgotDialog = ref(false)
+  const forgotForm = ref(null)
+  const forgotEmail = ref('')
+  const forgotLoading = ref(false)
+
   // VALIDACIONES
 
   function required (v) {
@@ -32,6 +37,52 @@
     message.value = texto
     color.value = tipo
     snackbar.value = true
+  }
+
+  function abrirRecuperacion () {
+    forgotEmail.value = email.value.trim()
+    forgotDialog.value = true
+  }
+
+  async function enviarRecuperacion () {
+    if (forgotLoading.value) return
+
+    const resultado = await forgotForm.value?.validate()
+    if (!resultado?.valid) {
+      mostrarMensaje('Ingresa un correo válido para continuar.')
+      return
+    }
+
+    forgotLoading.value = true
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+      const response = await fetch(`${API_BASE}/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotEmail.value.trim(),
+        }),
+      })
+
+      const res = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        mostrarMensaje('Revisa tu correo para el código', 'success')
+        forgotDialog.value = false
+        router.push({ path: '/reset-password', query: { email: forgotEmail.value.trim() } })
+      } else {
+        mostrarMensaje(res.message || 'No se pudo enviar el código de recuperación.', 'error')
+      }
+    } catch (error) {
+      console.error('Error al solicitar recuperación:', error)
+      mostrarMensaje('No se pudo conectar con el servidor backend.', 'error')
+    } finally {
+      forgotLoading.value = false
+    }
   }
 
   // INICIO DE SESIÓN CONECTADO A LARAVEL SANCTUM
@@ -242,11 +293,7 @@
               <a
                 class="forgot"
                 href="#"
-                @click.prevent="
-                  message = 'La recuperación de contraseña estará disponible próximamente.';
-                  color = 'info';
-                  snackbar = true
-                "
+                @click.prevent="abrirRecuperacion"
               >
                 ¿Olvidaste tu contraseña?
               </a>
@@ -280,6 +327,47 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-dialog v-model="forgotDialog" max-width="460">
+      <v-card class="pa-2" rounded="lg">
+        <v-card-title class="text-h6 font-weight-bold">
+          Recuperar contraseña
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4 text-body-2">
+            Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.
+          </p>
+          <v-form ref="forgotForm" @submit.prevent="enviarRecuperacion">
+            <label>Correo electrónico</label>
+            <v-text-field
+              v-model="forgotEmail"
+              autocomplete="email"
+              class="mt-2"
+              :disabled="forgotLoading"
+              placeholder="ejemplo@correo.com"
+              prepend-inner-icon="mdi-email-outline"
+              rounded="lg"
+              :rules="[required, validEmail]"
+              type="email"
+              variant="outlined"
+            />
+            <v-btn
+              block
+              class="mt-2"
+              color="primary"
+              :loading="forgotLoading"
+              rounded="lg"
+              type="submit"
+            >
+              Enviar código
+            </v-btn>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="forgotDialog = false">Cancelar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-snackbar
       v-model="snackbar"
