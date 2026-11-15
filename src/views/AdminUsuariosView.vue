@@ -1,124 +1,125 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
 
-const usuarios = ref([])
-const cargando = ref(false)
+  const usuarios = ref([])
+  const cargando = ref(false)
 
-const busqueda = ref('')
-const filtroEstado = ref('Todos')
-const filtroRol = ref('Todos')
+  const busqueda = ref('')
+  const filtroEstado = ref('Todos')
+  const filtroRol = ref('Todos')
 
-const dialogo = ref(false)
-const usuarioSeleccionado = ref(null)
+  const dialogo = ref(false)
+  const usuarioSeleccionado = ref(null)
 
-const snackbar = ref(false)
-const mensaje = ref('')
+  const snackbar = ref(false)
+  const mensaje = ref('')
 
-async function cargarUsuarios() {
-  cargando.value = true
-  try {
-    const token = localStorage.getItem('auth_token')
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  async function cargarUsuarios () {
+    cargando.value = true
+    try {
+      const token = localStorage.getItem('auth_token')
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-    const response = await fetch(`${API_BASE}/admin/users`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
+      const response = await fetch(`${API_BASE}/admin/users`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const res = await response.json()
+      if (response.ok && res.data) {
+        usuarios.value = res.data
       }
-    })
-
-    const res = await response.json()
-    if (response.ok && res.data) {
-      usuarios.value = res.data
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error)
+    } finally {
+      cargando.value = false
     }
-  } catch (error) {
-    console.error('Error al cargar usuarios:', error)
-  } finally {
-    cargando.value = false
   }
-}
 
-onMounted(() => {
-  cargarUsuarios()
-})
-
-const totalUsuarios = computed(() => usuarios.value.length)
-const activos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
-const inactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
-
-const usuariosFiltrados = computed(() => {
-  const texto = String(busqueda.value || '').toLowerCase().trim()
-
-  return usuarios.value.filter(usuario => {
-    const coincideBusqueda =
-      (usuario.name || '').toLowerCase().includes(texto) ||
-      (usuario.email || '').toLowerCase().includes(texto)
-
-    const coincideEstado =
-      filtroEstado.value === 'Todos' ||
-      (filtroEstado.value === 'Activo' && usuario.is_active === 1) ||
-      (filtroEstado.value === 'Inactivo' && usuario.is_active === 0)
-
-    const coincideRol =
-      filtroRol.value === 'Todos' ||
-      (filtroRol.value === 'Estudiante' && usuario.rol === 'estudiante') ||
-      (filtroRol.value === 'Administrador' && usuario.rol === 'administrador')
-
-    return coincideBusqueda && coincideEstado && coincideRol
+  onMounted(() => {
+    cargarUsuarios()
   })
-})
 
-function verUsuario(usuario) {
-  usuarioSeleccionado.value = usuario
-  dialogo.value = true
-}
+  const totalUsuarios = computed(() => usuarios.value.length)
+  const activos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
+  const inactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
 
-async function cambiarEstado(usuario) {
-  const nuevoEstado = usuario.is_active === 1 ? 0 : 1
-  try {
-    const token = localStorage.getItem('auth_token')
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  const usuariosFiltrados = computed(() => {
+    const texto = String(busqueda.value || '').toLowerCase().trim()
 
-    const response = await fetch(`${API_BASE}/admin/users/${usuario.id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ is_active: nuevoEstado })
+    return usuarios.value.filter(usuario => {
+      const coincideBusqueda
+        = (usuario.name || '').toLowerCase().includes(texto)
+          || (usuario.email || '').toLowerCase().includes(texto)
+
+      const coincideEstado
+        = filtroEstado.value === 'Todos'
+          || (filtroEstado.value === 'Activo' && usuario.is_active === 1)
+          || (filtroEstado.value === 'Inactivo' && usuario.is_active === 0)
+
+      const coincideRol
+        = filtroRol.value === 'Todos'
+          || (filtroRol.value === 'Estudiante' && usuario.rol === 'estudiante')
+          || (filtroRol.value === 'Administrador' && usuario.rol === 'administrador')
+
+      return coincideBusqueda && coincideEstado && coincideRol
     })
+  })
 
-    if (response.ok) {
-      usuario.is_active = nuevoEstado
-      mensaje.value = `La cuenta de ${usuario.name} ahora está ${nuevoEstado === 1 ? 'activa' : 'inactiva'}.`
-      snackbar.value = true
-    }
-  } catch (error) {
-    console.error('Error al cambiar estado:', error)
+  function verUsuario (usuario) {
+    usuarioSeleccionado.value = usuario
+    dialogo.value = true
   }
-}
 
-function iniciales(nombre) {
-  if (!nombre) return ''
-  return nombre
-    .split(' ')
-    .map(palabra => palabra.charAt(0))
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
+  async function cambiarEstado (usuario) {
+    const nuevoEstado = usuario.is_active === 1 ? 0 : 1
+    try {
+      const token = localStorage.getItem('auth_token')
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+      const response = await fetch(`${API_BASE}/admin/users/${usuario.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: nuevoEstado }),
+      })
+
+      if (response.ok) {
+        usuario.is_active = nuevoEstado
+        mensaje.value = `La cuenta de ${usuario.name} ahora está ${nuevoEstado === 1 ? 'activa' : 'inactiva'}.`
+        snackbar.value = true
+      }
+    } catch (error) {
+      console.error('Error al cambiar estado:', error)
+    }
+  }
+
+  function iniciales (nombre) {
+    if (!nombre) return ''
+    return nombre
+      .split(' ')
+      .map(palabra => palabra.charAt(0))
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
+  }
 </script>
 
 <template>
   <div class="usuarios-page">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
         <h1>Gestión de usuarios</h1>
+
         <p>
           Consulta y administra las cuentas de StudentWallet.
         </p>
@@ -138,6 +139,7 @@ function iniciales(nombre) {
               mdi-account-group-outline
             </v-icon>
           </div>
+
           <p>Total de usuarios</p>
           <h2>{{ totalUsuarios }}</h2>
         </v-card>
@@ -150,6 +152,7 @@ function iniciales(nombre) {
               mdi-account-check-outline
             </v-icon>
           </div>
+
           <p>Usuarios activos</p>
           <h2>{{ activos }}</h2>
         </v-card>
@@ -162,6 +165,7 @@ function iniciales(nombre) {
               mdi-account-off-outline
             </v-icon>
           </div>
+
           <p>Usuarios inactivos</p>
           <h2>{{ inactivos }}</h2>
         </v-card>
@@ -185,37 +189,37 @@ function iniciales(nombre) {
         <v-col cols="12" md="6">
           <v-text-field
             v-model="busqueda"
+            clearable
+            density="comfortable"
+            hide-details
             placeholder="Buscar por nombre o correo..."
             prepend-inner-icon="mdi-magnify"
-            variant="outlined"
             rounded="lg"
-            density="comfortable"
-            hide-details
-            clearable
+            variant="outlined"
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="3">
+        <v-col cols="12" md="3" sm="6">
           <v-select
             v-model="filtroEstado"
-            :items="['Todos', 'Activo', 'Inactivo']"
-            label="Estado"
-            variant="outlined"
-            rounded="lg"
             density="comfortable"
             hide-details
+            :items="['Todos', 'Activo', 'Inactivo']"
+            label="Estado"
+            rounded="lg"
+            variant="outlined"
           />
         </v-col>
 
-        <v-col cols="12" sm="6" md="3">
+        <v-col cols="12" md="3" sm="6">
           <v-select
             v-model="filtroRol"
-            :items="['Todos', 'Estudiante', 'Administrador']"
-            label="Rol"
-            variant="outlined"
-            rounded="lg"
             density="comfortable"
             hide-details
+            :items="['Todos', 'Estudiante', 'Administrador']"
+            label="Rol"
+            rounded="lg"
+            variant="outlined"
           />
         </v-col>
       </v-row>
@@ -262,9 +266,9 @@ function iniciales(nombre) {
 
               <td>
                 <v-chip
+                  :color="usuario.is_active === 1 ? 'success' : 'warning'"
                   size="small"
                   variant="tonal"
-                  :color="usuario.is_active === 1 ? 'success' : 'warning'"
                 >
                   {{ usuario.is_active === 1 ? 'Activo' : 'Inactivo' }}
                 </v-chip>
@@ -273,18 +277,18 @@ function iniciales(nombre) {
               <td>
                 <div class="actions">
                   <v-btn
-                    icon="mdi-eye-outline"
-                    variant="text"
                     color="primary"
+                    icon="mdi-eye-outline"
                     size="small"
+                    variant="text"
                     @click="verUsuario(usuario)"
                   />
 
                   <v-btn
-                    :icon="usuario.is_active === 1 ? 'mdi-account-off-outline' : 'mdi-account-check-outline'"
-                    variant="text"
                     :color="usuario.is_active === 1 ? 'warning' : 'success'"
+                    :icon="usuario.is_active === 1 ? 'mdi-account-off-outline' : 'mdi-account-check-outline'"
                     size="small"
+                    variant="text"
                     @click="cambiarEstado(usuario)"
                   />
                 </div>
@@ -328,9 +332,10 @@ function iniciales(nombre) {
 
           <div class="detail-row">
             <strong>Estado:</strong>
+
             <v-chip
-              size="small"
               :color="usuarioSeleccionado.is_active === 1 ? 'success' : 'warning'"
+              size="small"
               variant="tonal"
             >
               {{ usuarioSeleccionado.is_active === 1 ? 'Activo' : 'Inactivo' }}
@@ -340,10 +345,11 @@ function iniciales(nombre) {
 
         <v-card-actions class="pa-5">
           <v-spacer />
+
           <v-btn
             color="primary"
-            variant="flat"
             rounded="lg"
+            variant="flat"
             @click="dialogo = false"
           >
             Cerrar

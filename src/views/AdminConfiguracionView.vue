@@ -1,97 +1,97 @@
-<script setup>
-import { ref, watch } from 'vue'
+<script setup lang="ts">
+  import { ref } from 'vue'
 
-const valoresIniciales = {
-  nombrePlataforma: 'StudentWallet',
-  correoSoporte: 'soporte@studentwallet.demo',
-  moneda: 'USD',
-  registroUsuarios: true,
-  permitirSugerencias: true,
-  notificaciones: true,
-  modoMantenimiento: false,
-}
+  const valoresIniciales = {
+    nombrePlataforma: 'StudentWallet',
+    correoSoporte: 'soporte@studentwallet.demo',
+    moneda: 'USD',
+    registroUsuarios: true,
+    permitirSugerencias: true,
+    notificaciones: true,
+    modoMantenimiento: false,
+  }
 
-function cargarConfiguracion() {
-  try {
-    const datos = localStorage.getItem('studentwallet_admin_config')
+  function cargarConfiguracion () {
+    try {
+      const datos = localStorage.getItem('studentwallet_admin_config')
 
-    if (!datos) return { ...valoresIniciales }
+      if (!datos) return { ...valoresIniciales }
 
-    const guardado = JSON.parse(datos)
+      const guardado = JSON.parse(datos)
 
-    return {
-      ...valoresIniciales,
-      ...(guardado && typeof guardado === 'object' && !Array.isArray(guardado)
-        ? guardado
-        : {}),
+      return {
+        ...valoresIniciales,
+        ...(guardado && typeof guardado === 'object' && !Array.isArray(guardado)
+          ? guardado
+          : {}),
+      }
+    } catch {
+      return { ...valoresIniciales }
     }
-  } catch {
-    return { ...valoresIniciales }
   }
-}
 
-const configuracion = ref(cargarConfiguracion())
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorMensaje = ref('success')
-const dialogoRestablecer = ref(false)
+  const configuracion = ref(cargarConfiguracion())
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorMensaje = ref('success')
+  const dialogoRestablecer = ref(false)
 
-const reglas = {
-  requerido: v => !!String(v ?? '').trim() || 'Campo obligatorio',
-  correo: v =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? '')) ||
-    'Ingresa un correo válido',
-}
+  const reglas = {
+    requerido: v => !!String(v ?? '').trim() || 'Campo obligatorio',
+    correo: v =>
+      /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(String(v ?? ''))
+      || 'Ingresa un correo válido',
+  }
 
-const formulario = ref(null)
+  const formulario = ref(null)
 
-async function guardarConfiguracion() {
-  const resultado = await formulario.value.validate()
+  async function guardarConfiguracion () {
+    const resultado = await formulario.value.validate()
 
-  if (!resultado.valid) return
+    if (!resultado.valid) return
 
-  try {
-    localStorage.setItem(
-      'studentwallet_admin_config',
-      JSON.stringify(configuracion.value)
-    )
+    try {
+      localStorage.setItem(
+        'studentwallet_admin_config',
+        JSON.stringify(configuracion.value),
+      )
 
-    mensaje.value = 'Configuración guardada correctamente.'
-    colorMensaje.value = 'success'
+      mensaje.value = 'Configuración guardada correctamente.'
+      colorMensaje.value = 'success'
+      snackbar.value = true
+    } catch {
+      mensaje.value = 'No se pudo guardar la configuración.'
+      colorMensaje.value = 'error'
+      snackbar.value = true
+    }
+  }
+
+  function restablecerConfiguracion () {
+    configuracion.value = { ...valoresIniciales }
+
+    try {
+      localStorage.setItem(
+        'studentwallet_admin_config',
+        JSON.stringify(configuracion.value),
+      )
+
+      mensaje.value = 'Configuración restablecida correctamente.'
+      colorMensaje.value = 'success'
+    } catch {
+      mensaje.value = 'No se pudo restablecer la configuración.'
+      colorMensaje.value = 'error'
+    }
+
+    dialogoRestablecer.value = false
     snackbar.value = true
-  } catch {
-    mensaje.value = 'No se pudo guardar la configuración.'
-    colorMensaje.value = 'error'
-    snackbar.value = true
   }
-}
-
-function restablecerConfiguracion() {
-  configuracion.value = { ...valoresIniciales }
-
-  try {
-    localStorage.setItem(
-      'studentwallet_admin_config',
-      JSON.stringify(configuracion.value)
-    )
-
-    mensaje.value = 'Configuración restablecida correctamente.'
-    colorMensaje.value = 'success'
-  } catch {
-    mensaje.value = 'No se pudo restablecer la configuración.'
-    colorMensaje.value = 'error'
-  }
-
-  dialogoRestablecer.value = false
-  snackbar.value = true
-}
 </script>
 
 <template>
   <div class="config-page">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
@@ -128,35 +128,35 @@ function restablecerConfiguracion() {
 
             <v-text-field
               v-model="configuracion.nombrePlataforma"
+              class="mt-5"
               label="Nombre de la plataforma"
               prepend-inner-icon="mdi-web"
-              variant="outlined"
               rounded="lg"
               :rules="[reglas.requerido]"
-              class="mt-5"
+              variant="outlined"
             />
 
             <v-text-field
               v-model="configuracion.correoSoporte"
               label="Correo de soporte"
               prepend-inner-icon="mdi-email-outline"
-              variant="outlined"
               rounded="lg"
               :rules="[reglas.requerido, reglas.correo]"
+              variant="outlined"
             />
 
             <v-select
               v-model="configuracion.moneda"
-              label="Moneda predeterminada"
               :items="[
                 { title: 'Dólar estadounidense (USD)', value: 'USD' },
               ]"
+              label="Moneda predeterminada"
               prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
               rounded="lg"
+              variant="outlined"
             />
 
-            <v-alert type="info" variant="tonal" density="comfortable">
+            <v-alert density="comfortable" type="info" variant="tonal">
               Por ahora StudentWallet trabaja únicamente con dólares
               estadounidenses.
             </v-alert>
@@ -241,9 +241,9 @@ function restablecerConfiguracion() {
 
             <v-alert
               v-if="configuracion.modoMantenimiento"
+              class="mt-4"
               type="warning"
               variant="tonal"
-              class="mt-4"
             >
               El modo mantenimiento está seleccionado, pero todavía
               no bloquea el acceso a la plataforma.
@@ -308,11 +308,11 @@ function restablecerConfiguracion() {
             </p>
 
             <v-btn
-              color="warning"
-              variant="tonal"
               block
-              rounded="lg"
+              color="warning"
               prepend-icon="mdi-restore"
+              rounded="lg"
+              variant="tonal"
               @click="dialogoRestablecer = true"
             >
               Restablecer configuración
@@ -320,10 +320,10 @@ function restablecerConfiguracion() {
           </v-card>
 
           <v-alert
+            class="mt-5"
+            rounded="lg"
             type="info"
             variant="tonal"
-            rounded="lg"
-            class="mt-5"
           >
             Las preferencias se almacenan en este navegador.
             Todavía no controlan el funcionamiento real de
@@ -335,9 +335,9 @@ function restablecerConfiguracion() {
       <div class="save-actions">
         <v-btn
           color="primary"
-          size="large"
-          rounded="lg"
           prepend-icon="mdi-content-save-outline"
+          rounded="lg"
+          size="large"
           type="submit"
         >
           Guardar configuración
@@ -347,7 +347,7 @@ function restablecerConfiguracion() {
 
     <!-- CONFIRMACIÓN -->
     <v-dialog v-model="dialogoRestablecer" max-width="420">
-      <v-card rounded="xl" class="pa-4">
+      <v-card class="pa-4" rounded="xl">
         <v-card-title>
           Restablecer configuración
         </v-card-title>

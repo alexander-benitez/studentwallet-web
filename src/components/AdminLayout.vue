@@ -1,45 +1,43 @@
+<script setup lang="ts">
+  import { computed, ref, watch } from 'vue'
+  import { useRoute } from 'vue-router'
+  import AdminSidebar from '@/components/AdminSidebar.vue'
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import AdminSidebar from '@/components/AdminSidebar.vue'
+  const route = useRoute()
+  const drawer = ref(true)
 
-const route = useRoute()
-const drawer = ref(true)
-
-const titulos = {
-  '/admin': 'Dashboard administrativo',
-  '/admin/usuarios': 'Gestión de usuarios',
-  '/admin/finanzas': 'Supervisión financiera',
-  '/admin/comentarios': 'Comentarios y sugerencias',
-  '/admin/reportes': 'Reportes',
-  '/admin/configuracion': 'Configuración',
-}
-
-const tituloPagina = computed(() =>
-  titulos[route.path] || 'Administración'
-)
-
-watch(
-  () => route.path,
-  () => {
-    if (window.innerWidth < 960) {
-      drawer.value = false
-    }
+  const titulos = {
+    '/admin': 'Dashboard administrativo',
+    '/admin/usuarios': 'Gestión de usuarios',
+    '/admin/finanzas': 'Supervisión financiera',
+    '/admin/comentarios': 'Comentarios y sugerencias',
+    '/admin/reportes': 'Reportes',
+    '/admin/configuracion': 'Configuración',
   }
-)
-</script>
 
+  const tituloPagina = computed(() =>
+    titulos[route.path] || 'Administración',
+  )
+
+  watch(
+    () => route.path,
+    () => {
+      if (window.innerWidth < 960) {
+        drawer.value = false
+      }
+    },
+  )
+</script>
 
 <template>
   <v-layout class="admin-layout">
     <AdminSidebar v-model="drawer" />
 
     <v-app-bar
-      elevation="0"
       border="b"
-      height="72"
       class="admin-app-bar"
+      elevation="0"
+      height="72"
     >
       <v-app-bar-nav-icon @click="drawer = !drawer" />
 
@@ -50,9 +48,9 @@ watch(
       <v-spacer />
 
       <v-chip
+        class="mr-4"
         color="primary"
         variant="tonal"
-        class="mr-4"
       >
         Administrador
       </v-chip>
@@ -63,7 +61,6 @@ watch(
     </v-main>
   </v-layout>
 </template>
-
 
 <style scoped>
 

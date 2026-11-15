@@ -1,24 +1,22 @@
+<script setup lang="ts">
+  import { ref, watch } from 'vue'
+  import { useRoute } from 'vue-router'
+  import AppSidebar from '@/components/AppSidebar.vue'
 
-<script setup>
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import AppSidebar from '@/components/AppSidebar.vue'
+  const route = useRoute()
 
-const route = useRoute()
+  const drawer = ref(true)
 
-const drawer = ref(true)
-
-// Cerrar el menú móvil al cambiar de página
-watch(
-  () => route.path,
-  () => {
-    if (window.innerWidth < 960) {
-      drawer.value = false
-    }
-  }
-)
+  // Cerrar el menú móvil al cambiar de página
+  watch(
+    () => route.path,
+    () => {
+      if (window.innerWidth < 960) {
+        drawer.value = false
+      }
+    },
+  )
 </script>
-
 
 <template>
   <v-layout class="main-layout">
@@ -27,11 +25,11 @@ watch(
 
     <!-- BARRA SUPERIOR -->
     <v-app-bar
+      border="b"
+      class="main-app-bar"
       color="surface"
       elevation="0"
-      border="b"
       height="72"
-      class="main-app-bar"
     >
       <v-app-bar-nav-icon @click="drawer = !drawer" />
 
@@ -43,8 +41,8 @@ watch(
 
       <v-btn
         icon
-        variant="text"
         to="/perfil"
+        variant="text"
       >
         <v-icon>mdi-account-circle-outline</v-icon>
       </v-btn>
@@ -56,7 +54,6 @@ watch(
     </v-main>
   </v-layout>
 </template>
-
 
 <style scoped>
 

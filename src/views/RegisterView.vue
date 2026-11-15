@@ -1,116 +1,115 @@
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+  import { computed, ref } from 'vue'
 
-const form = ref(null)
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const showPassword = ref(false)
-const showConfirm = ref(false)
-const loading = ref(false)
-const snackbar = ref(false)
-const message = ref('')
-const alertColor = ref('info')
+  const form = ref(null)
+  const name = ref('')
+  const email = ref('')
+  const password = ref('')
+  const confirmPassword = ref('')
+  const showPassword = ref(false)
+  const showConfirm = ref(false)
+  const loading = ref(false)
+  const snackbar = ref(false)
+  const message = ref('')
+  const alertColor = ref('info')
 
-const required = (v) => !!String(v ?? '').trim() || 'Este campo es obligatorio'
-const emailRule = (v) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? '').trim()) ||
-  'Ingresa un correo electrónico válido'
-const passwordRule = (v) =>
-  String(v ?? '').length >= 8 || 'La contraseña debe tener al menos 8 caracteres'
-const confirmRule = (v) =>
-  v === password.value || 'Las contraseñas no coinciden'
-
-const strength = computed(() => {
-  const p = password.value
-  if (!p) return 0
-  let score = 0
-  if (p.length >= 8) score += 25
-  if (/[A-Z]/.test(p)) score += 25
-  if (/[0-9]/.test(p)) score += 25
-  if (/[^A-Za-z0-9]/.test(p)) score += 25
-  return score
-})
-const strengthColor = computed(() => {
-  if (strength.value <= 25) return 'error'
-  if (strength.value <= 50) return 'warning'
-  if (strength.value <= 75) return 'info'
-  return 'success'
-})
-const strengthLabel = computed(() => {
-  if (!password.value) return 'Sin contraseña'
-  if (strength.value <= 25) return 'Débil'
-  if (strength.value <= 50) return 'Regular'
-  if (strength.value <= 75) return 'Buena'
-  return 'Muy segura'
-})
-
-function avisar(texto, tipo = 'error') {
-  message.value = texto
-  alertColor.value = tipo
-  snackbar.value = true
-} 
-async function register() {
-  if (loading.value) return
-  const result = await form.value?.validate()
-  if (!result?.valid) {
-    avisar("Revisa los campos señalados antes de continuar.")
-    return
+  const required = v => !!String(v ?? '').trim() || 'Este campo es obligatorio'
+  function emailRule (v) {
+    return /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(String(v ?? '').trim())
+      || 'Ingresa un correo electrónico válido'
   }
-  loading.value = true
-  try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
-    const response = await fetch(`${API_BASE}/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        name: name.value.trim(),
-        email: email.value.trim(),
-        password: password.value.trim()
-      })
-    })
-    const res = await response.json()
-    if (response.ok) {
-      const token = res.data?.token
-      const user = res.data?.user
-      if (token) {
-        localStorage.setItem("auth_token", token)
-        localStorage.setItem("user_info", JSON.stringify(user))
-        avisar("¡Cuenta creada exitosamente! Redirigiendo...", "success")
-        setTimeout(() => {
-          window.location.href = "/dashboard"
-        }, 1000)
-      }
-    } else {
-      avisar(res.message || "Error al crear la cuenta. Intenta de nuevo.", "error")
+  function passwordRule (v) {
+    return String(v ?? '').length >= 8 || 'La contraseña debe tener al menos 8 caracteres'
+  }
+  function confirmRule (v) {
+    return v === password.value || 'Las contraseñas no coinciden'
+  }
+
+  const strength = computed(() => {
+    const p = password.value
+    if (!p) return 0
+    let score = 0
+    if (p.length >= 8) score += 25
+    if (/[A-Z]/.test(p)) score += 25
+    if (/\d/.test(p)) score += 25
+    if (/[^A-Z0-9]/i.test(p)) score += 25
+    return score
+  })
+  const strengthColor = computed(() => {
+    if (strength.value <= 25) return 'error'
+    if (strength.value <= 50) return 'warning'
+    if (strength.value <= 75) return 'info'
+    return 'success'
+  })
+  const strengthLabel = computed(() => {
+    if (!password.value) return 'Sin contraseña'
+    if (strength.value <= 25) return 'Débil'
+    if (strength.value <= 50) return 'Regular'
+    if (strength.value <= 75) return 'Buena'
+    return 'Muy segura'
+  })
+
+  function avisar (texto, tipo = 'error') {
+    message.value = texto
+    alertColor.value = tipo
+    snackbar.value = true
+  }
+  async function register () {
+    if (loading.value) return
+    const result = await form.value?.validate()
+    if (!result?.valid) {
+      avisar('Revisa los campos señalados antes de continuar.')
+      return
     }
-  } catch (error) {
-    console.error(error)
-    avisar("No se pudo conectar con el servidor backend.", "error")
-  } finally {
-    loading.value = false
+    loading.value = true
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+      const response = await fetch(`${API_BASE}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.value.trim(),
+          email: email.value.trim(),
+          password: password.value.trim(),
+        }),
+      })
+      const res = await response.json()
+      if (response.ok) {
+        const token = res.data?.token
+        const user = res.data?.user
+        if (token) {
+          localStorage.setItem('auth_token', token)
+          localStorage.setItem('user_info', JSON.stringify(user))
+          avisar('¡Cuenta creada exitosamente! Redirigiendo...', 'success')
+          setTimeout(() => {
+            window.location.href = '/dashboard'
+          }, 1000)
+        }
+      } else {
+        avisar(res.message || 'Error al crear la cuenta. Intenta de nuevo.', 'error')
+      }
+    } catch (error) {
+      console.error(error)
+      avisar('No se pudo conectar con el servidor backend.', 'error')
+    } finally {
+      loading.value = false
+    }
   }
-}
 
 </script>
 
-
-
 <template>
 
-  <v-container fluid class="register-page pa-0">
+  <v-container class="register-page pa-0" fluid>
 
-    <v-row no-gutters class="fill-height">
-
-
+    <v-row class="fill-height" no-gutters>
 
       <!-- PANEL IZQUIERDO -->
 
-      <v-col cols="12" md="6" class="brand-panel">
+      <v-col class="brand-panel" cols="12" md="6">
 
         <div class="brand-content">
 
@@ -122,17 +121,13 @@ async function register() {
 
           </div>
 
-
-
           <div class="hero">
 
-            <v-chip variant="outlined" color="white" class="mb-6">
+            <v-chip class="mb-6" color="white" variant="outlined">
 
               Empieza a construir tu futuro
 
             </v-chip>
-
-
 
             <h1>
 
@@ -144,8 +139,6 @@ async function register() {
 
             </h1>
 
-
-
             <p>
 
               Crea tu cuenta y comienza a administrar
@@ -155,8 +148,6 @@ async function register() {
               Cada pequeño ahorro cuenta.
 
             </p>
-
-
 
             <div class="benefits">
 
@@ -172,8 +163,6 @@ async function register() {
 
               </div>
 
-
-
               <div>
 
                 <v-icon color="#6EE7B7">
@@ -185,8 +174,6 @@ async function register() {
                 Organiza tus presupuestos
 
               </div>
-
-
 
               <div>
 
@@ -204,8 +191,6 @@ async function register() {
 
           </div>
 
-
-
           <p class="footer-brand">
 
             © 2026 StudentWallet
@@ -214,35 +199,27 @@ async function register() {
 
         </div>
 
+        <div class="glow glow-one" />
 
-
-        <div class="glow glow-one"></div>
-
-        <div class="glow glow-two"></div>
+        <div class="glow glow-two" />
 
       </v-col>
 
-
-
       <!-- PANEL DERECHO -->
 
-      <v-col cols="12" md="6" class="form-panel">
+      <v-col class="form-panel" cols="12" md="6">
 
         <v-card class="register-card" elevation="0">
 
-
-
           <div class="welcome-icon">
 
-            <v-icon size="30" color="primary">
+            <v-icon color="primary" size="30">
 
               mdi-account-plus-outline
 
             </v-icon>
 
           </div>
-
-
 
           <h2>Crea tu cuenta</h2>
 
@@ -252,37 +229,55 @@ async function register() {
 
           </p>
 
-
-
           <v-form ref="form" @submit.prevent="register">
-
-
 
             <label>Nombre completo</label>
 
-            <v-text-field v-model="name" autocomplete="name" :disabled="loading" placeholder="Tu nombre completo"
-              prepend-inner-icon="mdi-account-outline" variant="outlined" rounded="lg" :rules="[required]"
-              class="mt-2 mb-2" />
-
-
+            <v-text-field
+              v-model="name"
+              autocomplete="name"
+              class="mt-2 mb-2"
+              :disabled="loading"
+              placeholder="Tu nombre completo"
+              prepend-inner-icon="mdi-account-outline"
+              rounded="lg"
+              :rules="[required]"
+              variant="outlined"
+            />
 
             <label>Correo electrónico</label>
 
-            <v-text-field v-model="email" autocomplete="email" :disabled="loading" type="email"
-              placeholder="ejemplo@correo.com" prepend-inner-icon="mdi-email-outline" variant="outlined" rounded="lg"
-              :rules="[required, emailRule]" class="mt-2 mb-2" />
-
-
+            <v-text-field
+              v-model="email"
+              autocomplete="email"
+              class="mt-2 mb-2"
+              :disabled="loading"
+              placeholder="ejemplo@correo.com"
+              prepend-inner-icon="mdi-email-outline"
+              rounded="lg"
+              :rules="[required, emailRule]"
+              type="email"
+              variant="outlined"
+            />
 
             <label>Contraseña</label>
 
-            <v-text-field v-model="password" autocomplete="new-password" :disabled="loading"
-              :type="showPassword ? 'text' : 'password'" :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'
+            <v-text-field
+              v-model="password"
+              :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'
 
-                " prepend-inner-icon="mdi-lock-outline" placeholder="Mínimo 8 caracteres" variant="outlined" rounded="lg"
-              :rules="[required, passwordRule]" class="mt-2" @click:append-inner="showPassword = !showPassword" />
-
-
+              "
+              autocomplete="new-password"
+              class="mt-2"
+              :disabled="loading"
+              placeholder="Mínimo 8 caracteres"
+              prepend-inner-icon="mdi-lock-outline"
+              rounded="lg"
+              :rules="[required, passwordRule]"
+              :type="showPassword ? 'text' : 'password'"
+              variant="outlined"
+              @click:append-inner="showPassword = !showPassword"
+            />
 
             <!-- SEGURIDAD DE CONTRASEÑA -->
 
@@ -300,37 +295,46 @@ async function register() {
 
               </div>
 
-
-
-              <v-progress-linear :model-value="strength" :color="strengthColor" height="6" rounded />
+              <v-progress-linear :color="strengthColor" height="6" :model-value="strength" rounded />
 
             </div>
 
-
-
             <label>Confirmar contraseña</label>
 
-            <v-text-field v-model="confirmPassword" autocomplete="new-password" :disabled="loading"
-              :type="showConfirm ? 'text' : 'password'" :append-inner-icon="showConfirm ? 'mdi-eye-off' : 'mdi-eye'
+            <v-text-field
+              v-model="confirmPassword"
+              :append-inner-icon="showConfirm ? 'mdi-eye-off' : 'mdi-eye'
 
-                " prepend-inner-icon="mdi-shield-lock-outline" placeholder="Repite tu contraseña" variant="outlined"
-              rounded="lg" :rules="[required, confirmRule]" class="mt-2 mb-4"
-              @click:append-inner="showConfirm = !showConfirm" />
+              "
+              autocomplete="new-password"
+              class="mt-2 mb-4"
+              :disabled="loading"
+              placeholder="Repite tu contraseña"
+              prepend-inner-icon="mdi-shield-lock-outline"
+              rounded="lg"
+              :rules="[required, confirmRule]"
+              :type="showConfirm ? 'text' : 'password'"
+              variant="outlined"
+              @click:append-inner="showConfirm = !showConfirm"
+            />
 
-
-
-            <v-btn type="submit" color="primary" size="x-large" rounded="lg" block :loading="loading"
-              :disabled="loading" append-icon="mdi-arrow-right" class="register-btn">
+            <v-btn
+              append-icon="mdi-arrow-right"
+              block
+              class="register-btn"
+              color="primary"
+              :disabled="loading"
+              :loading="loading"
+              rounded="lg"
+              size="x-large"
+              type="submit"
+            >
 
               Crear mi cuenta
 
             </v-btn>
 
-
-
           </v-form>
-
-
 
           <div class="login-link">
 
@@ -344,8 +348,6 @@ async function register() {
 
           </div>
 
-
-
           <div class="security">
 
             <v-icon size="16">mdi-shield-check</v-icon>
@@ -354,23 +356,23 @@ async function register() {
 
           </div>
 
-
-
         </v-card>
 
       </v-col>
 
     </v-row>
 
-
-
     <!-- NOTIFICACIONES -->
 
-    <v-snackbar v-model="snackbar" :color="alertColor" location="top right" :timeout="3500" rounded="lg">
+    <v-snackbar
+      v-model="snackbar"
+      :color="alertColor"
+      location="top right"
+      rounded="lg"
+      :timeout="3500"
+    >
 
       {{ message }}
-
-
 
       <template #actions>
 
@@ -383,8 +385,6 @@ async function register() {
   </v-container>
 
 </template>
-
-
 
 <style scoped>
 /* =========================================
