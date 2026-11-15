@@ -11,8 +11,20 @@ export const useFinanzasStore = defineStore('finanzas', () => {
   const gastos = ref(0)
   const cargando = ref(false)
   const error = ref(null)
+  const perfil = ref({
+    nombre: '',
+    apellido: '',
+    universidad: '',
+    carrera: '',
+  })
+  const configuracion = ref({
+    notificaciones: true,
+    alertasPresupuesto: true,
+    mostrarConsejos: true,
+  })
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  const CONFIG_KEY = 'studentwallet_config'
 
   function getHeaders () {
     const token = localStorage.getItem('auth_token')
@@ -23,9 +35,15 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     }
   }
 
+  // Convierte los tipos usados por la interfaz a los de la API
+  function tipoApi (valor) {
+    const tipo = String(valor ?? '').toLowerCase()
+    return tipo === 'income' || tipo === 'ingreso' ? 'ingreso' : 'gasto'
+  }
+
   // Normaliza una categoría para que las vistas tengan siempre el mismo formato
   function normalizarCategoria (raw = {}, fallback = {}) {
-    const tipo = raw.type ?? raw.tipo ?? fallback.type ?? fallback.tipo ?? 'expense'
+    const tipo = raw.type ?? raw.tipo ?? fallback.type ?? fallback.tipo ?? 'gasto'
     return {
       ...fallback,
       ...raw,
@@ -155,7 +173,9 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     try {
       const payload = {
         name: data.name ?? data.nombre,
-        type: data.type ?? data.tipo,
+        type: tipoApi(data.type ?? data.tipo),
+        color: data.color || '#2563EB',
+        icon: data.icono || data.icon || 'mdi-tag-outline',
       }
       const res = await fetch(`${API_BASE}/categories`, {
         method: 'POST',
@@ -168,9 +188,11 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         categorias.value.push(creada)
         return { ok: true, mensaje: 'Categoría creada correctamente', data: creada }
       }
+      console.error('ERROR BACKEND:', json)
+      console.error('Error al crear categoría:', res.status, json)
       return {
         ok: false,
-        mensaje: json.message || 'No se pudo crear la categoría.',
+        mensaje: json?.message || 'No se pudo crear la categoría.',
       }
     } catch (error_) {
       console.error('Error al crear categoría:', error_)
@@ -183,7 +205,9 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     try {
       const payload = {
         name: data.name ?? data.nombre,
-        type: data.type ?? data.tipo,
+        type: tipoApi(data.type ?? data.tipo),
+        color: data.color || '#2563EB',
+        icon: data.icono || data.icon || 'mdi-tag-outline',
       }
       const res = await fetch(`${API_BASE}/categories/${id}`, {
         method: 'PUT',
@@ -207,9 +231,10 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         }
         return { ok: true, mensaje: 'Categoría actualizada correctamente', data: actualizada }
       }
+      console.error('Error al actualizar categoría:', res.status, json)
       return {
         ok: false,
-        mensaje: json.message || 'No se pudo actualizar la categoría.',
+        mensaje: json?.message || 'No se pudo actualizar la categoría.',
       }
     } catch (error_) {
       console.error('Error al actualizar categoría:', error_)
@@ -237,73 +262,62 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     }
   }
 
-  // Crear un presupuesto
+  // Cargar presupuestos desde la API
+  async function cargarPresupuestos (month, year) {
+    try {
+      const params = new URLSearchParams()
+
+      if (month != null) {
+        params.set('month', String(month))
+      }
+
+      if (year != null) {
+        params.set('year', String(year))
+      }
+
+      const query = params.toString()
+      const res = await fetch(`${API_BASE}/budgets${query ? `?${query}` : ''}`, {
+        headers: getHeaders(),
+      })
+
+      if (res.ok) {
+        const json = await res.json()
+        presupuestos.value = json.data || []
+      }
+    } catch (error_) {
+      console.error('Error al cargar presupuestos:', error_)
+    }
+  }
+
+  // Crear o actualizar un presupuesto
   async function guardarPresupuesto (data) {
     try {
-      let month = data.month
-      let year = data.year
-
-      if (typeof month === 'string' && month.includes('-')) {
-        const [anio, mes] = month.split('-')
-        year = year ?? Number(anio)
-        month = Number(mes)
-      } else if (typeof month === 'string') {
-        month = Number(month)
-      }
-      if (year != null) {
-        year = Number(year)
-      }
-
-      const nombreCategoria
-        = data.category?.nombre
-          ?? data.category?.name
-          ?? data.category
-          ?? data.categoria
-          ?? null
-      const categoria = categorias.value.find(
-        item =>
-          (item.nombre ?? item.name) === nombreCategoria
-          || String(item.id) === String(data.category_id),
-      )
-      const categoryId = data.category_id ?? categoria?.id ?? null
-
       const payload = {
-        category_id: categoryId,
+        category_id: data.category_id,
         amount: Number(data.amount ?? data.limit),
-        month,
-        year,
+        month: Number(data.month),
+        year: Number(data.year),
       }
+
       const res = await fetch(`${API_BASE}/budgets`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(payload),
       })
-      const json = await res.json()
-      if (res.ok) {
-        const respuesta = json.data || json
-        const periodo = typeof data.month === 'string' && data.month.includes('-')
-          ? data.month
-          : `${year}-${String(month).padStart(2, '0')}`
-        const nuevo = {
-          ...respuesta,
-          id: respuesta.id,
-          category: nombreCategoria ?? respuesta.category ?? '',
-          month: periodo,
-          limit: Number(respuesta.amount ?? respuesta.limit ?? payload.amount),
-        }
 
-        const index = presupuestos.value.findIndex(
-          presupuesto =>
-            (nuevo.id != null && String(presupuesto.id) === String(nuevo.id))
-            || (presupuesto.category === nuevo.category && presupuesto.month === nuevo.month),
-        )
-        if (index === -1) {
-          presupuestos.value.push(nuevo)
-        } else {
-          presupuestos.value[index] = nuevo
-        }
-        return { ok: true, mensaje: 'Presupuesto guardado correctamente', data: nuevo }
+      const json = await res.json()
+
+      if (res.ok) {
+        const respuesta = json.data
+
+        presupuestos.value = [
+          ...presupuestos.value.filter(presupuesto => String(presupuesto.id) !== String(respuesta.id)),
+          respuesta,
+        ]
+
+        return { ok: true, mensaje: 'Presupuesto guardado correctamente', data: respuesta }
       }
+
       return {
         ok: false,
         mensaje: json.message || 'No se pudo guardar el presupuesto.',
@@ -315,37 +329,122 @@ export const useFinanzasStore = defineStore('finanzas', () => {
   }
 
   // Eliminar un presupuesto
-  async function eliminarPresupuesto (id, month) {
+  async function eliminarPresupuesto (id) {
     try {
-      const encontrado = presupuestos.value.find(
-        presupuesto =>
-          String(presupuesto.id) === String(id)
-          || (month != null
-            && presupuesto.category === id
-            && presupuesto.month === month),
-      )
-      const presupuestoId = encontrado?.id ?? (month == null ? id : null)
-
-      if (presupuestoId == null) {
-        return { ok: false, mensaje: 'No se encontró el presupuesto.' }
-      }
-
-      const res = await fetch(`${API_BASE}/budgets/${presupuestoId}`, {
+      const res = await fetch(`${API_BASE}/budgets/${id}`, {
         method: 'DELETE',
         headers: getHeaders(),
       })
+
       if (res.ok) {
         presupuestos.value = presupuestos.value.filter(
-          presupuesto => String(presupuesto.id) !== String(presupuestoId),
+          presupuesto => String(presupuesto.id) !== String(id),
         )
         return { ok: true, mensaje: 'Presupuesto eliminado correctamente' }
       }
-      return { ok: false, mensaje: 'No se pudo eliminar el presupuesto.' }
+
+      const json = await res.json()
+      return { ok: false, mensaje: json.message || 'No se pudo eliminar el presupuesto.' }
     } catch (error_) {
       console.error('Error al eliminar presupuesto:', error_)
       return { ok: false, mensaje: 'Error de red al eliminar el presupuesto.' }
     }
   }
+
+  // Cargar el perfil del usuario autenticado desde la API
+  async function cargarPerfil () {
+    try {
+      const res = await fetch(`${API_BASE}/user`, { headers: getHeaders() })
+      if (res.ok) {
+        const json = await res.json()
+        const u = json.data || json
+
+        perfil.value = {
+          nombre: u.name ?? u.nombre ?? '',
+          apellido: u.apellido ?? '',
+          universidad: u.universidad ?? '',
+          carrera: u.carrera ?? '',
+        }
+
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+
+        localStorage.setItem(
+          'user_info',
+          JSON.stringify({
+            ...userInfo,
+            name: perfil.value.nombre,
+            apellido: perfil.value.apellido,
+          }),
+        )
+      }
+    } catch (error_) {
+      console.error('Error al cargar perfil:', error_)
+    }
+  }
+
+  // Actualizar el perfil en la API
+  async function actualizarPerfil (data) {
+    try {
+      const payload = {
+        name: data.nombre ?? data.name ?? undefined,
+        apellido: data.apellido ?? undefined,
+        universidad: data.universidad ?? undefined,
+        carrera: data.carrera ?? undefined,
+      }
+
+      const res = await fetch(`${API_BASE}/user`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      })
+
+      const json = await res.json()
+
+      if (res.ok) {
+        await cargarPerfil()
+        return { ok: true, mensaje: 'Tu perfil se actualizó correctamente' }
+      }
+
+      return {
+        ok: false,
+        mensaje: json.message || 'No se pudo actualizar el perfil.',
+      }
+    } catch (error_) {
+      console.error('Error al actualizar perfil:', error_)
+      return { ok: false, mensaje: 'Error de red al actualizar el perfil.' }
+    }
+  }
+
+  function guardarConfiguracion () {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(configuracion.value))
+  }
+
+  function cargarConfiguracion () {
+    try {
+      const raw = localStorage.getItem(CONFIG_KEY)
+      if (raw) {
+        configuracion.value = { ...configuracion.value, ...JSON.parse(raw) }
+      }
+    } catch (error_) {
+      console.error('Error al leer la configuración:', error_)
+    }
+  }
+
+  function actualizarConfiguracion (patch) {
+    configuracion.value = { ...configuracion.value, ...patch }
+    guardarConfiguracion()
+  }
+
+  function restablecerConfiguracion () {
+    configuracion.value = {
+      notificaciones: true,
+      alertasPresupuesto: true,
+      mostrarConsejos: true,
+    }
+    guardarConfiguracion()
+  }
+
+  cargarConfiguracion()
 
   // Getters computados
   const saldoActual = computed(() => saldo.value)
@@ -386,6 +485,8 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     gastos,
     cargando,
     error,
+    perfil,
+    configuracion,
     saldoActual,
     totalIngresos,
     totalGastos,
@@ -394,6 +495,11 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     cargarCategorias,
     cargarMovimientos,
     cargarBalance,
+    cargarPresupuestos,
+    cargarPerfil,
+    actualizarPerfil,
+    actualizarConfiguracion,
+    restablecerConfiguracion,
     agregarMovimiento,
     eliminarMovimiento,
     agregarCategoria,

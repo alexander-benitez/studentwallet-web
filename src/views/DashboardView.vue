@@ -34,6 +34,73 @@ const money = (value) =>
     style: "currency",
     currency: "USD",
   }).format(Number(value) || 0)
+
+const dialog = ref(false)
+const dialogTipo = ref('ingreso')
+const form = ref(null)
+const concepto = ref('')
+const monto = ref(null)
+const categoria = ref(null)
+const fecha = ref(new Date().toLocaleDateString('en-CA'))
+const descripcion = ref('')
+const guardando = ref(false)
+const snackbar = ref(false)
+const mensaje = ref('')
+const colorMensaje = ref('success')
+
+const categorias = computed(() =>
+  (finanzas?.categorias || [])
+    .filter(categoria => categoria.type === (dialogTipo.value === 'ingreso' ? 'ingreso' : 'gasto'))
+    .map(categoria => ({ title: categoria.name, value: categoria.id }))
+)
+
+const obligatorio = v =>
+  !!String(v ?? '').trim() || 'Este campo es obligatorio'
+
+const montoValido = v =>
+  (Number.isFinite(Number(v)) && Number(v) > 0) || 'Ingresa un monto mayor a cero'
+
+function abrirModal(tipo) {
+  dialogTipo.value = tipo
+  concepto.value = ''
+  monto.value = null
+  categoria.value = null
+  fecha.value = new Date().toLocaleDateString('en-CA')
+  descripcion.value = ''
+  form.value?.resetValidation()
+  dialog.value = true
+}
+
+async function guardarMovimiento() {
+  const resultado = await form.value.validate()
+
+  if (!resultado.valid) return
+
+  guardando.value = true
+
+  const res = await finanzas?.agregarMovimiento({
+    amount: Number(monto.value),
+    type: dialogTipo.value,
+    category_id: categoria.value,
+    description: concepto.value.trim(),
+    date: fecha.value,
+  })
+
+  guardando.value = false
+  dialog.value = false
+
+  if (res?.ok) {
+    mensaje.value = dialogTipo.value === 'ingreso'
+      ? 'Ingreso registrado correctamente'
+      : 'Gasto registrado correctamente'
+    colorMensaje.value = 'success'
+    snackbar.value = true
+  } else {
+    mensaje.value = res?.message || 'Error al guardar el movimiento'
+    colorMensaje.value = 'error'
+    snackbar.value = true
+  }
+}
 </script>
 
 <template>
@@ -57,9 +124,20 @@ const money = (value) =>
         size="large"
         prepend-icon="mdi-plus"
         elevation="0"
-        @click="router.push('/ingresos')"
+        @click="abrirModal('ingreso')"
       >
         Nuevo ingreso
+      </v-btn>
+
+      <v-btn
+        color="primary"
+        rounded="lg"
+        size="large"
+        prepend-icon="mdi-plus"
+        elevation="0"
+        @click="abrirModal('gasto')"
+      >
+        Nuevo gasto
       </v-btn>
     </div>
 
@@ -181,6 +259,148 @@ const money = (value) =>
         </tbody>
       </v-table>
     </v-card>
+
+    <!-- MODAL REGISTRAR MOVIMIENTO -->
+    <v-dialog v-model="dialog" max-width="530">
+      <v-card class="dialog-card" rounded="xl">
+        <v-card-title class="dialog-title">
+          <div>
+            <h3>{{ dialogTipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar gasto' }}</h3>
+            <p>Agrega una nueva {{ dialogTipo === 'ingreso' ? 'entrada de dinero' : 'salida de dinero' }}.</p>
+          </div>
+
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="dialog = false"
+          />
+        </v-card-title>
+
+        <v-card-text>
+          <v-form ref="form" @submit.prevent="guardarMovimiento">
+
+            <label>Concepto</label>
+
+            <v-text-field
+              v-model="concepto"
+              placeholder="Ej. Pago de trabajo"
+              prepend-inner-icon="mdi-text-box-outline"
+              variant="outlined"
+              rounded="lg"
+              :rules="[obligatorio]"
+              class="mt-2 mb-2"
+            />
+
+            <label>Monto (USD)</label>
+
+            <v-text-field
+              v-model="monto"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              prepend-inner-icon="mdi-currency-usd"
+              variant="outlined"
+              rounded="lg"
+              :rules="[obligatorio, montoValido]"
+              class="mt-2 mb-2"
+            />
+
+            <!-- CATEGORIA -->
+            <div class="form-field">
+              <label>Categoria</label>
+
+              <v-select
+                v-model="categoria"
+                :items="categorias"
+                placeholder="Selecciona una categoria"
+                prepend-inner-icon="mdi-shape-outline"
+                variant="outlined"
+                rounded="lg"
+                :rules="[obligatorio]"
+                class="mt-2"
+              />
+
+              <v-btn
+                to="/categorias"
+                variant="text"
+                color="primary"
+                size="small"
+                prepend-icon="mdi-plus-circle-outline"
+                class="category-button"
+              >
+                Administrar mis categorias
+              </v-btn>
+            </div>
+
+            <!-- FECHA -->
+            <div class="form-field">
+              <label>Fecha</label>
+
+              <v-text-field
+                v-model="fecha"
+                type="date"
+                variant="outlined"
+                rounded="lg"
+                :rules="[obligatorio]"
+                class="mt-2"
+              />
+            </div>
+
+            <label>Descripcion (opcional)</label>
+
+            <v-textarea
+              v-model="descripcion"
+              placeholder="Agrega detalles sobre este movimiento..."
+              variant="outlined"
+              rounded="lg"
+              rows="2"
+              class="mt-2"
+            />
+
+            <div class="dialog-actions">
+              <v-btn
+                variant="outlined"
+                rounded="lg"
+                @click="dialog = false"
+              >
+                Cancelar
+              </v-btn>
+
+              <v-btn
+                type="submit"
+                color="primary"
+                rounded="lg"
+                prepend-icon="mdi-content-save-outline"
+                :loading="guardando"
+              >
+                Guardar
+              </v-btn>
+            </div>
+
+          </v-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- NOTIFICACION -->
+    <v-snackbar
+      v-model="snackbar"
+      :color="colorMensaje"
+      location="top right"
+      :timeout="3500"
+    >
+      {{ mensaje }}
+
+      <template #actions>
+        <v-btn
+          variant="text"
+          @click="snackbar = false"
+        >
+          Cerrar
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 

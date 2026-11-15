@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanzasStore } from '@/stores/finanzas'
 
@@ -44,9 +44,7 @@ function nombreMes(valor) {
   const [anio, numeroMes] = valor.split('-')
   const mesEncontrado = meses.find(m => m.valor === numeroMes)
 
-  return mesEncontrado
-    ? `${mesEncontrado.nombre} ${anio}`
-    : valor
+  return mesEncontrado ? `${mesEncontrado.nombre} ${anio}` : valor
 }
 
 function abrirSelectorMes() {
@@ -69,56 +67,62 @@ function seleccionarMesFormulario(valor) {
   menuMesFormulario.value = false
 }
 
-
 const snackbar = ref(false)
 const mensaje = ref('')
 const colorAlerta = ref('success')
 
-const categorias = [
-  { title: 'Alimentación', icon: 'mdi-food', color: '#F59E0B' },
-  { title: 'Transporte', icon: 'mdi-bus', color: '#2563EB' },
-  { title: 'Educación', icon: 'mdi-school', color: '#7C3AED' },
-  { title: 'Entretenimiento', icon: 'mdi-gamepad-variant', color: '#EC4899' },
-  { title: 'Salud', icon: 'mdi-medical-bag', color: '#10B981' },
-  { title: 'Compras', icon: 'mdi-shopping', color: '#06B6D4' },
-  { title: 'Otros', icon: 'mdi-dots-horizontal-circle', color: '#64748B' },
-]
-
-const presupuestosMes = computed(() =>
-  (finanzas?.presupuestos || [])
-    .filter(p => p.month === mesSeleccionado.value)
-    .map(p => {
-      const gastado = (finanzas?.movimientos || [])
-        .filter(m =>
-          m.type === 'expense' &&
-          m.category === p.category &&
-          m.date?.startsWith(p.month)
-        )
-        .reduce((total, m) => total + Number(m.amount), 0)
-
-      const porcentaje = p.limit > 0
-        ? (gastado / p.limit) * 100
-        : 0
-
-      const info = categorias.find(c => c.title === p.category)
-
-      return {
-        ...p,
-        gastado,
-        disponible: Math.max(0, p.limit - gastado),
-        porcentaje,
-        icon: info?.icon || 'mdi-wallet',
-        color: info?.color || '#2563EB',
-      }
-    })
+const categoriasPresupuesto = computed(() =>
+  (finanzas?.categorias || [])
+    .filter(categoria => String(categoria.tipo ?? categoria.type) === 'gasto')
+    .map(categoria => ({
+      id: categoria.id,
+      title: categoria.nombre ?? categoria.name,
+      icon: categoria.icono ?? categoria.icon ?? 'mdi-tag-outline',
+      color: categoria.color ?? '#2563EB',
+    }))
 )
 
+const presupuestosMes = computed(() => {
+  const [anio, numeroMes] = mesSeleccionado.value.split('-')
+  const monthKey = `${anio}-${String(numeroMes).padStart(2, '0')}`
+
+  return (finanzas?.presupuestos || [])
+    .filter(presupuesto => `${presupuesto.year}-${String(presupuesto.month).padStart(2, '0')}` === monthKey)
+    .map(presupuesto => {
+      const gastado = (finanzas?.movimientos || [])
+        .filter(movimiento =>
+          movimiento.type === 'gasto'
+          && String(movimiento.category?.id) === String(presupuesto.category_id)
+          && String(movimiento.date || '').startsWith(monthKey)
+        )
+        .reduce((total, movimiento) => total + Number(movimiento.amount || 0), 0)
+
+      const limit = Number(presupuesto.amount ?? presupuesto.limit ?? 0)
+      const porcentaje = limit > 0 ? (gastado / limit) * 100 : 0
+      const categoria = presupuesto.category
+      const categoriaNombre = categoria?.name ?? categoria?.nombre ?? 'Sin categoría'
+
+      return {
+        ...presupuesto,
+        id: presupuesto.id,
+        category: categoriaNombre,
+        category_id: presupuesto.category_id,
+        limit,
+        gastado,
+        disponible: Math.max(0, limit - gastado),
+        porcentaje,
+        icon: categoria?.icono ?? categoria?.icon ?? 'mdi-wallet-outline',
+        color: categoria?.color ?? '#2563EB',
+      }
+    })
+})
+
 const totalPresupuestado = computed(() =>
-  presupuestosMes.value.reduce((total, p) => total + Number(p.limit), 0)
+  presupuestosMes.value.reduce((total, presupuesto) => total + Number(presupuesto.limit || 0), 0)
 )
 
 const totalGastado = computed(() =>
-  presupuestosMes.value.reduce((total, p) => total + p.gastado, 0)
+  presupuestosMes.value.reduce((total, presupuesto) => total + Number(presupuesto.gastado || 0), 0)
 )
 
 const disponibles = computed(() =>
@@ -131,12 +135,10 @@ const dinero = valor =>
     currency: 'USD',
   }).format(valor)
 
-const obligatorio = v =>
-  !!v || 'Este campo es obligatorio'
+const obligatorio = v => !!v || 'Este campo es obligatorio'
 
 const limiteValido = v =>
-  (Number.isFinite(Number(v)) && Number(v) > 0) ||
-  'Ingresa un límite mayor a cero'
+  (Number.isFinite(Number(v)) && Number(v) > 0) || 'Ingresa un límite mayor a cero'
 
 function colorProgreso(porcentaje) {
   if (porcentaje >= 100) return 'error'
@@ -150,7 +152,6 @@ function estadoPresupuesto(porcentaje) {
   return 'Bajo control'
 }
 
-
 function abrirFormulario() {
   categoria.value = null
   limite.value = null
@@ -159,23 +160,32 @@ function abrirFormulario() {
   dialog.value = true
 }
 
-
 async function guardar() {
   const resultado = await form.value.validate()
   if (!resultado.valid) return
 
-  finanzas?.guardarPresupuesto({
-    category: categoria.value,
-    month: mes.value,
-    limit: Number(limite.value),
+  const [anio, numeroMes] = mes.value.split('-')
+
+  const res = await finanzas?.guardarPresupuesto({
+    category_id: categoria.value,
+    amount: Number(limite.value),
+    month: Number(numeroMes),
+    year: Number(anio),
   })
 
   mesSeleccionado.value = mes.value
-  dialog.value = false
 
-  mensaje.value = 'Presupuesto guardado correctamente'
-  colorAlerta.value = 'success'
-  snackbar.value = true
+  if (res?.ok) {
+    dialog.value = false
+    mensaje.value = 'Presupuesto guardado correctamente'
+    colorAlerta.value = 'success'
+    snackbar.value = true
+  } else {
+    dialog.value = true
+    mensaje.value = res?.mensaje || 'No se pudo guardar el presupuesto.'
+    colorAlerta.value = 'error'
+    snackbar.value = true
+  }
 }
 
 function confirmarEliminar(presupuesto) {
@@ -183,21 +193,28 @@ function confirmarEliminar(presupuesto) {
   dialogEliminar.value = true
 }
 
-function eliminar() {
+async function eliminar() {
   if (!presupuestoEliminar.value) return
 
-  finanzas?.eliminarPresupuesto(
-    presupuestoEliminar.value.category,
-    presupuestoEliminar.value.month
-  )
+  const res = await finanzas?.eliminarPresupuesto(presupuestoEliminar.value.id)
 
-  dialogEliminar.value = false
-  presupuestoEliminar.value = null
-
-  mensaje.value = 'Presupuesto eliminado correctamente'
-  colorAlerta.value = 'success'
-  snackbar.value = true
+  if (res?.ok) {
+    dialogEliminar.value = false
+    presupuestoEliminar.value = null
+    mensaje.value = 'Presupuesto eliminado correctamente'
+    colorAlerta.value = 'success'
+    snackbar.value = true
+  }
 }
+
+onMounted(async () => {
+  await Promise.all([
+    finanzas?.cargarCategorias(),
+    finanzas?.cargarMovimientos(),
+    finanzas?.cargarBalance(),
+    finanzas?.cargarPresupuestos(Number(mesSeleccionado.value.split('-')[1]), Number(mesSeleccionado.value.split('-')[0])),
+  ])
+})
 </script>
 
 <template>
@@ -500,9 +517,9 @@ function eliminar() {
             <label>Categoría</label>
             <v-select
               v-model="categoria"
-              :items="categorias"
+              :items="categoriasPresupuesto"
               item-title="title"
-              item-value="title"
+              item-value="id"
               placeholder="Selecciona una categoría"
               prepend-inner-icon="mdi-shape-outline"
               variant="outlined"

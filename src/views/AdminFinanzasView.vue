@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
@@ -26,39 +26,20 @@ ChartJS.register(
 
 const theme = useTheme()
 
-// Datos en integración con API.
-// No representan finanzas reales de los estudiantes.
-const resumenMensual = ref([
-  { mes: 'Ene', ingresos: 3200, gastos: 2100 },
-  { mes: 'Feb', ingresos: 3900, gastos: 2500 },
-  { mes: 'Mar', ingresos: 3500, gastos: 2800 },
-  { mes: 'Abr', ingresos: 4600, gastos: 3100 },
-  { mes: 'May', ingresos: 4200, gastos: 2900 },
-  { mes: 'Jun', ingresos: 5100, gastos: 3400 },
-  { mes: 'Jul', ingresos: 4800, gastos: 3600 },
-  { mes: 'Ago', ingresos: 5600, gastos: 3800 },
-  { mes: 'Sep', ingresos: 5900, gastos: 4100 },
-  { mes: 'Oct', ingresos: 6200, gastos: 4300 },
-])
+const resumenMensual = ref([])
 
-const categorias = ref([
-  { nombre: 'Alimentación', monto: 12500, color: '#2563EB' },
-  { nombre: 'Transporte', monto: 8200, color: '#7C3AED' },
-  { nombre: 'Educación', monto: 6700, color: '#10B981' },
-  { nombre: 'Entretenimiento', monto: 4200, color: '#F59E0B' },
-  { nombre: 'Otros', monto: 3100, color: '#EF4444' },
-])
+const categorias = ref([])
 
 const totalIngresos = computed(() =>
   resumenMensual.value.reduce(
-    (total, item) => total + item.ingresos,
+    (total, item) => total + Number(item.ingresos || 0),
     0
   )
 )
 
 const totalGastos = computed(() =>
   resumenMensual.value.reduce(
-    (total, item) => total + item.gastos,
+    (total, item) => total + Number(item.gastos || 0),
     0
   )
 )
@@ -94,10 +75,10 @@ const graficoBarras = computed(() => ({
 }))
 
 const graficoCategorias = computed(() => ({
-  labels: categorias.value.map(item => item.nombre),
+  labels: categorias.value.map(item => item.name),
   datasets: [
     {
-      data: categorias.value.map(item => item.monto),
+      data: categorias.value.map(item => item.amount),
       backgroundColor: categorias.value.map(item => item.color),
       borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
       borderWidth: 2,
@@ -106,7 +87,6 @@ const graficoCategorias = computed(() => ({
   ],
 }))
 
-// Opciones del gráfico de barras adaptadas al tema.
 const opcionesBarras = computed(() => {
   const esOscuro = theme.current.value.dark
   const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
@@ -155,7 +135,6 @@ const opcionesBarras = computed(() => {
   }
 })
 
-// Opciones del gráfico circular adaptadas al tema.
 const opcionesCategorias = computed(() => {
   const esOscuro = theme.current.value.dark
   const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
@@ -179,6 +158,29 @@ const opcionesCategorias = computed(() => {
         bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
       },
     },
+  }
+})
+
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+    const response = await fetch(`${API_BASE}/admin/reports`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    const json = await response.json()
+
+    if (response.ok && json.data) {
+      resumenMensual.value = json.data.monthly ?? []
+      categorias.value = json.data.categories ?? []
+    }
+  } catch (error) {
+    console.error('Error al cargar finanzas administrativas:', error)
   }
 })
 

@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ExcelJS from 'exceljs'
@@ -8,6 +8,9 @@ import ExcelJS from 'exceljs'
 const periodo = ref('Todos')
 const snackbar = ref(false)
 const mensaje = ref('')
+const datos = ref([])
+const cargando = ref(false)
+const error = ref(null)
 
 const periodos = [
   'Todos',
@@ -17,53 +20,65 @@ const periodos = [
   'Cuarto trimestre',
 ]
 
-// Datos en integración con API.
-// Más adelante se reemplazarán por estadísticas del backend.
-const datos = [
-  { mes: 'Enero', trimestre: 'Primer trimestre', ingresos: 3200, gastos: 2100 },
-  { mes: 'Febrero', trimestre: 'Primer trimestre', ingresos: 3900, gastos: 2500 },
-  { mes: 'Marzo', trimestre: 'Primer trimestre', ingresos: 3500, gastos: 2800 },
-  { mes: 'Abril', trimestre: 'Segundo trimestre', ingresos: 4600, gastos: 3100 },
-  { mes: 'Mayo', trimestre: 'Segundo trimestre', ingresos: 4200, gastos: 2900 },
-  { mes: 'Junio', trimestre: 'Segundo trimestre', ingresos: 5100, gastos: 3400 },
-  { mes: 'Julio', trimestre: 'Tercer trimestre', ingresos: 4800, gastos: 3600 },
-  { mes: 'Agosto', trimestre: 'Tercer trimestre', ingresos: 5600, gastos: 3800 },
-  { mes: 'Septiembre', trimestre: 'Tercer trimestre', ingresos: 5900, gastos: 4100 },
-  { mes: 'Octubre', trimestre: 'Cuarto trimestre', ingresos: 6200, gastos: 4300 },
-]
-
-const registros = computed(() =>
-  periodo.value === 'Todos'
-    ? datos
-    : datos.filter(item => item.trimestre === periodo.value)
-)
-
 const totalIngresos = computed(() =>
-  registros.value.reduce((total, item) => total + item.ingresos, 0)
+  datos.value.reduce((total, item) => total + Number(item.ingresos || 0), 0)
 )
 
 const totalGastos = computed(() =>
-  registros.value.reduce((total, item) => total + item.gastos, 0)
+  datos.value.reduce((total, item) => total + Number(item.gastos || 0), 0)
 )
 
 const balance = computed(() => totalIngresos.value - totalGastos.value)
+
+const registros = computed(() => {
+  if (periodo.value === 'Todos') {
+    return datos.value
+  }
+
+  const year = new Date().getFullYear()
+  const month = Number(datos.value[0]?.month?.slice(5, 7) ?? 1)
+  const quarter = Math.floor((month - 1) / 3) + 1
+  const firstMonth = (quarter - 1) * 3 + 1
+  const lastMonth = quarter * 3
+
+  return datos.value.filter(item => {
+    const itemMonth = Number(item.month?.slice(5, 7) ?? 0)
+    return itemMonth >= firstMonth && itemMonth <= lastMonth && Number(item.month?.slice(0, 4)) === year
+  })
+})
+
+onMounted(async () => {
+  cargando.value = true
+
+  try {
+    const token = localStorage.getItem('auth_token')
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+    const response = await fetch(`${API_BASE}/admin/reports`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    const json = await response.json()
+
+    if (response.ok && json.data) {
+      datos.value = json.data.monthly ?? []
+    }
+  } catch (err) {
+    console.error('Error al cargar reportes:', err)
+  } finally {
+    cargando.value = false
+  }
+})
 
 function moneda(valor) {
   return new Intl.NumberFormat('es-SV', {
     style: 'currency',
     currency: 'USD',
-  }).format(valor)
+  }).format(Number(valor || 0))
 }
-
-function filasReporte() {
-  return registros.value.map(item => ({
-    Mes: item.mes,
-    Ingresos: item.ingresos,
-    Gastos: item.gastos,
-    Balance: item.ingresos - item.gastos,
-  }))
-}
-
 
 async function exportarExcel() {
   try {

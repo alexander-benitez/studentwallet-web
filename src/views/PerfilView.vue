@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanzasStore } from '@/stores/finanzas'
 
@@ -11,26 +11,32 @@ const formulario = ref(null)
 const guardando = ref(false)
 const snackbar = ref(false)
 const mensaje = ref('')
+const colorMensaje = ref('success')
 
 const datos = ref({
   nombre: '',
   apellido: '',
-  correo: '',
   universidad: '',
   carrera: '',
 })
 
-function cargarPerfil() {
+function sincronizarDatos() {
   datos.value = {
     nombre: finanzas?.perfil?.nombre || '',
     apellido: finanzas?.perfil?.apellido || '',
-    correo: finanzas?.perfil?.correo || '',
     universidad: finanzas?.perfil?.universidad || '',
     carrera: finanzas?.perfil?.carrera || '',
   }
 }
 
-cargarPerfil()
+async function cargarPerfil() {
+  await finanzas?.cargarPerfil()
+  sincronizarDatos()
+}
+
+onMounted(() => {
+  void cargarPerfil()
+})
 
 const nombreVistaPrevia = computed(() => {
   return (
@@ -48,13 +54,8 @@ const inicialesVistaPrevia = computed(() => {
 const nombreObligatorio = v =>
   !!String(v ?? '').trim() || 'Este campo es obligatorio'
 
-const correoValido = v =>
-  !v ||
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ||
-  'Ingresa un correo electrónico válido'
-
 const hayCambios = computed(() =>
-  ['nombre', 'apellido', 'correo', 'universidad', 'carrera']
+  ['nombre', 'apellido', 'universidad', 'carrera']
     .some(campo =>
       datos.value[campo] !== ((finanzas?.perfil || {})[campo] || '')
     )
@@ -62,7 +63,7 @@ const hayCambios = computed(() =>
 
 watch(
   () => finanzas?.perfil,
-  cargarPerfil,
+  sincronizarDatos,
   { deep: true }
 )
 
@@ -73,8 +74,16 @@ async function guardarPerfil() {
   guardando.value = true
 
   try {
-    finanzas?.actualizarPerfil(datos.value)
-    mensaje.value = 'Tu perfil se actualizó correctamente'
+    const res = await finanzas?.actualizarPerfil(datos.value)
+
+    if (res?.ok) {
+      mensaje.value = res.mensaje || 'Tu perfil se actualizó correctamente'
+      colorMensaje.value = 'success'
+    } else {
+      mensaje.value = res?.mensaje || 'No se pudo actualizar el perfil'
+      colorMensaje.value = 'error'
+    }
+
     snackbar.value = true
   } finally {
     guardando.value = false
@@ -124,10 +133,6 @@ function descartarCambios() {
             </v-avatar>
 
             <h2>{{ nombreVistaPrevia }}</h2>
-
-            <p class="profile-email">
-              {{ datos.correo || 'Sin correo registrado' }}
-            </p>
 
             <v-chip
               color="primary"
@@ -225,20 +230,7 @@ function descartarCambios() {
                 />
               </v-col>
 
-              <v-col cols="12">
-                <label>Correo electrónico</label>
 
-                <v-text-field
-                  v-model="datos.correo"
-                  type="email"
-                  placeholder="ejemplo@correo.com"
-                  prepend-inner-icon="mdi-email-outline"
-                  variant="outlined"
-                  rounded="lg"
-                  :rules="[correoValido]"
-                  class="mt-2"
-                />
-              </v-col>
 
               <v-col cols="12" sm="6">
                 <label>Universidad o institución</label>
@@ -324,7 +316,7 @@ function descartarCambios() {
     <!-- NOTIFICACIÓN -->
     <v-snackbar
       v-model="snackbar"
-      color="success"
+      :color="colorMensaje"
       location="top right"
       rounded="lg"
       :timeout="3500"

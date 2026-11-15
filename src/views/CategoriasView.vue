@@ -1,11 +1,15 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useFinanzasStore } from '@/stores/finanzas'
 
 const finanzas = useFinanzasStore()
 
-const tipoActivo = ref('expense')
+onMounted(() => {
+  finanzas?.cargarCategorias()
+})
+
+const tipoActivo = ref('gasto')
 const busqueda = ref('')
 const dialogo = ref(false)
 const dialogoEliminar = ref(false)
@@ -70,11 +74,11 @@ const categoriasFiltradas = computed(() => {
 })
 
 const totalGastos = computed(() =>
-  (finanzas?.categorias || []).filter(c => c.tipo === 'expense').length
+  (finanzas?.categorias || []).filter(c => c.tipo === 'gasto').length
 )
 
 const totalIngresos = computed(() =>
-  (finanzas?.categorias || []).filter(c => c.tipo === 'income').length
+  (finanzas?.categorias || []).filter(c => c.tipo === 'ingreso').length
 )
 
 function notificar(texto, color = 'success') {
@@ -108,14 +112,15 @@ async function guardarCategoria() {
   if (!resultadoValidacion.valid) return
 
   const resultado = editandoId.value
-    ? finanzas?.editarCategoria(editandoId.value, categoriaForm.value)
-    : finanzas?.agregarCategoria(categoriaForm.value)
+    ? await finanzas?.editarCategoria(editandoId.value, categoriaForm.value)
+    : await finanzas?.agregarCategoria(categoriaForm.value)
 
-  if (!resultado.ok) {
-    notificar(resultado.mensaje, 'error')
+  if (!resultado?.ok) {
+    notificar(resultado?.mensaje || 'No se pudo guardar la categoría.', 'error')
     return
   }
 
+  tipoActivo.value = categoriaForm.value.tipo
   dialogo.value = false
   notificar(resultado.mensaje)
 }
@@ -125,18 +130,18 @@ function confirmarEliminar(categoria) {
   dialogoEliminar.value = true
 }
 
-function eliminarCategoria() {
+async function eliminarCategoria() {
   if (!categoriaEliminar.value) return
 
-  const resultado = finanzas?.eliminarCategoria(
+  const resultado = await finanzas?.eliminarCategoria(
     categoriaEliminar.value.id
   )
 
   dialogoEliminar.value = false
 
   notificar(
-    resultado.mensaje,
-    resultado.ok ? 'success' : 'error'
+    resultado?.mensaje || 'No se pudo eliminar la categoría.',
+    resultado?.ok ? 'success' : 'error'
   )
 
   categoriaEliminar.value = null
@@ -225,12 +230,12 @@ function eliminarCategoria() {
           rounded="lg"
           divided
         >
-          <v-btn value="expense">
+          <v-btn value="gasto">
             <v-icon start>mdi-trending-down</v-icon>
             Gastos
           </v-btn>
 
-          <v-btn value="income">
+          <v-btn value="ingreso">
             <v-icon start>mdi-trending-up</v-icon>
             Ingresos
           </v-btn>
@@ -316,13 +321,13 @@ function eliminarCategoria() {
               size="small"
               variant="tonal"
               :color="
-                categoria.tipo === 'income'
+                categoria.tipo === 'ingreso'
                   ? 'success'
                   : 'primary'
               "
               class="mt-3"
             >
-              {{ categoria.tipo === 'income' ? 'Ingreso' : 'Gasto' }}
+              {{ categoria.tipo === 'ingreso' ? 'Ingreso' : 'Gasto' }}
             </v-chip>
           </v-card>
         </v-col>
@@ -362,8 +367,8 @@ function eliminarCategoria() {
   <v-select
     v-model="categoriaForm.tipo"
     :items="[
-      { title: 'Gasto', value: 'expense' },
-      { title: 'Ingreso', value: 'income' },
+      { title: 'Gasto', value: 'gasto' },
+      { title: 'Ingreso', value: 'ingreso' },
     ]"
     variant="outlined"
     rounded="lg"

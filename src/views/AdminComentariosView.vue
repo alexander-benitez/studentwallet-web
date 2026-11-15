@@ -8,6 +8,7 @@ const filtroEstado = ref('Todos')
 const filtroCategoria = ref('Todas')
 const snackbar = ref(false)
 const mensaje = ref('')
+const colorSnackbar = ref('success')
 
 const estados = [
   'Pendiente',
@@ -26,6 +27,12 @@ const etiquetasEstado = {
   pendiente: 'Pendiente',
   leida: 'En revisión',
   resuelta: 'Resuelto',
+}
+
+const estadosApi = {
+  'Pendiente': 'pendiente',
+  'En revisión': 'leida',
+  'Resuelto': 'resuelta',
 }
 
 const comentarios = ref([])
@@ -112,11 +119,44 @@ const resueltos = computed(() =>
   ).length
 )
 
-function cambiarEstado(id, nuevoEstado) {
+async function cambiarEstado(id, nuevoEstado) {
   const comentario = comentarios.value.find((item) => item.id === id)
-  if (comentario) comentario.estado = nuevoEstado
+  const status = estadosApi[nuevoEstado]
 
-  mensaje.value = 'Estado actualizado correctamente.'
+  if (!comentario || !status) return
+
+  const estadoAnterior = comentario.estado
+  comentario.estado = nuevoEstado
+
+  try {
+    const respuesta = await fetch(`${API_BASE}/admin/suggestions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+      body: JSON.stringify({ status }),
+    })
+
+    const datos = await respuesta.json().catch(() => ({}))
+
+    if (!respuesta.ok) {
+      comentario.estado = estadoAnterior
+      mensaje.value = datos.message || 'No se pudo actualizar el estado.'
+      colorSnackbar.value = 'error'
+    } else {
+      comentario.estado = etiquetasEstado[datos.data?.status] || nuevoEstado
+      mensaje.value = datos.message || 'Estado actualizado correctamente.'
+      colorSnackbar.value = 'success'
+    }
+  } catch (error) {
+    console.error('Error al actualizar el estado:', error)
+    comentario.estado = estadoAnterior
+    mensaje.value = 'Error de conexión al actualizar el estado.'
+    colorSnackbar.value = 'error'
+  }
+
   snackbar.value = true
 }
 
@@ -338,7 +378,7 @@ onMounted(() => {
 
     <v-snackbar
       v-model="snackbar"
-      color="success"
+      :color="colorSnackbar"
       location="top right"
       :timeout="3000"
     >
