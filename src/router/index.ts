@@ -22,6 +22,13 @@ const router = createRouter({
       component: () => import('@/views/RegisterView.vue'),
     },
 
+    // Recuperación de contraseña
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+    },
+
     // Dashboard
     {
       path: '/dashboard',
@@ -123,7 +130,7 @@ router.beforeEach(to => {
   if (to.path.startsWith('/admin') && rol !== 'administrador') {
     return '/'
   }
-  if (to.path !== '/' && to.path !== '/registro' && !token) {
+  if (to.path !== '/' && to.path !== '/registro' && to.path !== '/reset-password' && !token) {
     return '/'
   }
   return true
