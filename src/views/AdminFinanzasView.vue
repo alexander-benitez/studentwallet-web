@@ -1,201 +1,199 @@
+<script setup lang="ts">
+  import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip,
+  } from 'chart.js'
+  import { computed, ref } from 'vue'
+  import { Bar, Doughnut } from 'vue-chartjs'
+  import { useTheme } from 'vuetify'
 
-<script setup>
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
-import { Bar, Doughnut } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-} from 'chart.js'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement
-)
-
-const theme = useTheme()
-
-// Datos en integración con API.
-// No representan finanzas reales de los estudiantes.
-const resumenMensual = ref([
-  { mes: 'Ene', ingresos: 3200, gastos: 2100 },
-  { mes: 'Feb', ingresos: 3900, gastos: 2500 },
-  { mes: 'Mar', ingresos: 3500, gastos: 2800 },
-  { mes: 'Abr', ingresos: 4600, gastos: 3100 },
-  { mes: 'May', ingresos: 4200, gastos: 2900 },
-  { mes: 'Jun', ingresos: 5100, gastos: 3400 },
-  { mes: 'Jul', ingresos: 4800, gastos: 3600 },
-  { mes: 'Ago', ingresos: 5600, gastos: 3800 },
-  { mes: 'Sep', ingresos: 5900, gastos: 4100 },
-  { mes: 'Oct', ingresos: 6200, gastos: 4300 },
-])
-
-const categorias = ref([
-  { nombre: 'Alimentación', monto: 12500, color: '#2563EB' },
-  { nombre: 'Transporte', monto: 8200, color: '#7C3AED' },
-  { nombre: 'Educación', monto: 6700, color: '#10B981' },
-  { nombre: 'Entretenimiento', monto: 4200, color: '#F59E0B' },
-  { nombre: 'Otros', monto: 3100, color: '#EF4444' },
-])
-
-const totalIngresos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.ingresos,
-    0
+  ChartJS.register(
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    ArcElement,
   )
-)
 
-const totalGastos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.gastos,
-    0
+  const theme = useTheme()
+
+  // Datos en integración con API.
+  // No representan finanzas reales de los estudiantes.
+  const resumenMensual = ref([
+    { mes: 'Ene', ingresos: 3200, gastos: 2100 },
+    { mes: 'Feb', ingresos: 3900, gastos: 2500 },
+    { mes: 'Mar', ingresos: 3500, gastos: 2800 },
+    { mes: 'Abr', ingresos: 4600, gastos: 3100 },
+    { mes: 'May', ingresos: 4200, gastos: 2900 },
+    { mes: 'Jun', ingresos: 5100, gastos: 3400 },
+    { mes: 'Jul', ingresos: 4800, gastos: 3600 },
+    { mes: 'Ago', ingresos: 5600, gastos: 3800 },
+    { mes: 'Sep', ingresos: 5900, gastos: 4100 },
+    { mes: 'Oct', ingresos: 6200, gastos: 4300 },
+  ])
+
+  const categorias = ref([
+    { nombre: 'Alimentación', monto: 12_500, color: '#2563EB' },
+    { nombre: 'Transporte', monto: 8200, color: '#7C3AED' },
+    { nombre: 'Educación', monto: 6700, color: '#10B981' },
+    { nombre: 'Entretenimiento', monto: 4200, color: '#F59E0B' },
+    { nombre: 'Otros', monto: 3100, color: '#EF4444' },
+  ])
+
+  const totalIngresos = computed(() =>
+    resumenMensual.value.reduce(
+      (total, item) => total + item.ingresos,
+      0,
+    ),
   )
-)
 
-const balance = computed(() =>
-  totalIngresos.value - totalGastos.value
-)
+  const totalGastos = computed(() =>
+    resumenMensual.value.reduce(
+      (total, item) => total + item.gastos,
+      0,
+    ),
+  )
 
-const porcentajeAhorro = computed(() =>
-  totalIngresos.value > 0
-    ? (balance.value / totalIngresos.value) * 100
-    : 0
-)
+  const balance = computed(() =>
+    totalIngresos.value - totalGastos.value,
+  )
 
-const graficoBarras = computed(() => ({
-  labels: resumenMensual.value.map(item => item.mes),
-  datasets: [
-    {
-      label: 'Ingresos',
-      data: resumenMensual.value.map(item => item.ingresos),
-      backgroundColor: '#2563EB',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-    {
-      label: 'Gastos',
-      data: resumenMensual.value.map(item => item.gastos),
-      backgroundColor: '#7C3AED',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-  ],
-}))
+  const porcentajeAhorro = computed(() =>
+    totalIngresos.value > 0
+      ? (balance.value / totalIngresos.value) * 100
+      : 0,
+  )
 
-const graficoCategorias = computed(() => ({
-  labels: categorias.value.map(item => item.nombre),
-  datasets: [
-    {
-      data: categorias.value.map(item => item.monto),
-      backgroundColor: categorias.value.map(item => item.color),
-      borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
-      borderWidth: 2,
-      hoverOffset: 8,
-    },
-  ],
-}))
+  const graficoBarras = computed(() => ({
+    labels: resumenMensual.value.map(item => item.mes),
+    datasets: [
+      {
+        label: 'Ingresos',
+        data: resumenMensual.value.map(item => item.ingresos),
+        backgroundColor: '#2563EB',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+      {
+        label: 'Gastos',
+        data: resumenMensual.value.map(item => item.gastos),
+        backgroundColor: '#7C3AED',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+    ],
+  }))
 
-// Opciones del gráfico de barras adaptadas al tema.
-const opcionesBarras = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
-  const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
+  const graficoCategorias = computed(() => ({
+    labels: categorias.value.map(item => item.nombre),
+    datasets: [
+      {
+        data: categorias.value.map(item => item.monto),
+        backgroundColor: categorias.value.map(item => item.color),
+        borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
+        borderWidth: 2,
+        hoverOffset: 8,
+      },
+    ],
+  }))
 
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 20,
+  // Opciones del gráfico de barras adaptadas al tema.
+  const opcionesBarras = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+    const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 20,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+          borderColor: colorCuadricula,
+          borderWidth: 1,
         },
       },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-        borderColor: colorCuadricula,
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: colorTexto,
-          callback: value => '$' + value.toLocaleString(),
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: colorTexto,
+            callback: value => '$' + value.toLocaleString(),
+          },
+          grid: {
+            color: colorCuadricula,
+          },
         },
-        grid: {
-          color: colorCuadricula,
-        },
-      },
-      x: {
-        ticks: {
-          color: colorTexto,
-        },
-        grid: {
-          display: false,
+        x: {
+          ticks: {
+            color: colorTexto,
+          },
+          grid: {
+            display: false,
+          },
         },
       },
-    },
+    }
+  })
+
+  // Opciones del gráfico circular adaptadas al tema.
+  const opcionesCategorias = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 15,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+        },
+      },
+    }
+  })
+
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
   }
-})
-
-// Opciones del gráfico circular adaptadas al tema.
-const opcionesCategorias = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
-
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '72%',
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 15,
-        },
-      },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-      },
-    },
-  }
-})
-
-function dinero(valor) {
-  return new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-}
 </script>
-
 
 <template>
   <div class="finanzas-admin">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
@@ -214,7 +212,7 @@ function dinero(valor) {
 
     <!-- INDICADORES -->
     <v-row class="mt-5">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon blue">
             <v-icon color="primary" size="26">
@@ -229,7 +227,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon purple">
             <v-icon color="#7C3AED" size="26">
@@ -244,7 +242,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon green">
             <v-icon color="success" size="26">
@@ -259,7 +257,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon orange">
             <v-icon color="warning" size="26">
@@ -374,9 +372,9 @@ function dinero(valor) {
 
     <v-alert
       class="mt-5"
+      rounded="lg"
       type="info"
       variant="tonal"
-      rounded="lg"
     >
       Este panel utiliza información ficticia para demostrar
       cómo funcionaría la supervisión financiera.

@@ -1,78 +1,78 @@
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
 
-const usuarios = ref([])
-const cargando = ref(false)
+  const usuarios = ref([])
+  const cargando = ref(false)
 
-async function cargarUsuarios() {
-  cargando.value = true
-  try {
-    const token = localStorage.getItem('auth_token')
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+  async function cargarUsuarios () {
+    cargando.value = true
+    try {
+      const token = localStorage.getItem('auth_token')
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-    const response = await fetch(`${API_BASE}/admin/users`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
+      const response = await fetch(`${API_BASE}/admin/users`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const res = await response.json()
+      if (response.ok && res.data) {
+        usuarios.value = res.data
       }
-    })
-
-    const res = await response.json()
-    if (response.ok && res.data) {
-      usuarios.value = res.data
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error)
+    } finally {
+      cargando.value = false
     }
-  } catch (error) {
-    console.error('Error al cargar usuarios:', error)
-  } finally {
-    cargando.value = false
   }
-}
 
-onMounted(() => {
-  cargarUsuarios()
-})
+  onMounted(() => {
+    cargarUsuarios()
+  })
 
-const totalUsuarios = computed(() => usuarios.value.length)
-const usuariosActivos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
-const usuariosInactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
+  const totalUsuarios = computed(() => usuarios.value.length)
+  const usuariosActivos = computed(() => usuarios.value.filter(u => u.is_active === 1).length)
+  const usuariosInactivos = computed(() => usuarios.value.filter(u => u.is_active === 0).length)
 
-const estadisticas = computed(() => [
-  {
-    titulo: 'Usuarios registrados',
-    valor: totalUsuarios.value,
-    icono: 'mdi-account-group-outline',
-    color: '#2563EB',
-    fondo: '#DBEAFE',
-  },
-  {
-    titulo: 'Usuarios activos',
-    valor: usuariosActivos.value,
-    icono: 'mdi-account-check-outline',
-    color: '#10B981',
-    fondo: '#D1FAE5',
-  },
-  {
-    titulo: 'Usuarios inactivos',
-    valor: usuariosInactivos.value,
-    icono: 'mdi-account-off-outline',
-    color: '#F59E0B',
-    fondo: '#FEF3C7',
-  },
-  {
-    titulo: 'Total de movimientos',
-    valor: '—',
-    icono: 'mdi-swap-horizontal',
-    color: '#7C3AED',
-    fondo: '#EDE9FE',
-  },
-])
+  const estadisticas = computed(() => [
+    {
+      titulo: 'Usuarios registrados',
+      valor: totalUsuarios.value,
+      icono: 'mdi-account-group-outline',
+      color: '#2563EB',
+      fondo: '#DBEAFE',
+    },
+    {
+      titulo: 'Usuarios activos',
+      valor: usuariosActivos.value,
+      icono: 'mdi-account-check-outline',
+      color: '#10B981',
+      fondo: '#D1FAE5',
+    },
+    {
+      titulo: 'Usuarios inactivos',
+      valor: usuariosInactivos.value,
+      icono: 'mdi-account-off-outline',
+      color: '#F59E0B',
+      fondo: '#FEF3C7',
+    },
+    {
+      titulo: 'Total de movimientos',
+      valor: '—',
+      icono: 'mdi-swap-horizontal',
+      color: '#7C3AED',
+      fondo: '#EDE9FE',
+    },
+  ])
 </script>
 
 <template>
   <div class="admin-dashboard">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" size="small" class="mb-3">
+        <v-chip class="mb-3" color="primary" size="small" variant="tonal">
           Administración
         </v-chip>
 
@@ -89,7 +89,13 @@ const estadisticas = computed(() => [
     </div>
 
     <v-row class="mt-4">
-      <v-col v-for="item in estadisticas" :key="item.titulo" cols="12" sm="6" lg="3">
+      <v-col
+        v-for="item in estadisticas"
+        :key="item.titulo"
+        cols="12"
+        lg="3"
+        sm="6"
+      >
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon" :style="{ background: item.fondo }">
             <v-icon :color="item.color" size="27">
@@ -129,16 +135,18 @@ const estadisticas = computed(() => [
 
             <tbody>
               <tr v-if="usuarios.length === 0">
-                <td colspan="4" class="text-center py-4">
+                <td class="text-center py-4" colspan="4">
                   {{ cargando ? 'Cargando usuarios...' : 'No hay usuarios registrados.' }}
                 </td>
               </tr>
+
               <tr v-for="usuario in usuarios" :key="usuario.id">
                 <td>{{ usuario.name }}</td>
                 <td>{{ usuario.email }}</td>
                 <td>{{ usuario.rol }}</td>
+
                 <td>
-                  <v-chip size="small" :color="usuario.is_active === 1 ? 'success' : 'warning'" variant="tonal">
+                  <v-chip :color="usuario.is_active === 1 ? 'success' : 'warning'" size="small" variant="tonal">
                     {{ usuario.is_active === 1 ? 'Activo' : 'Inactivo' }}
                   </v-chip>
                 </td>
@@ -177,7 +185,7 @@ const estadisticas = computed(() => [
             Gestión real de usuarios
           </div>
 
-          <v-alert type="info" variant="tonal" density="comfortable" class="mt-5">
+          <v-alert class="mt-5" density="comfortable" type="info" variant="tonal">
             Los datos mostrados son reales y provienen de la base de datos.
           </v-alert>
         </v-card>

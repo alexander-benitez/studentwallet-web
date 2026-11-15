@@ -1,4 +1,3 @@
-
 /**
  * plugins/vuetify.ts
  *
@@ -20,17 +19,17 @@ export default createVuetify({
       light: {
         dark: false,
         colors: {
-          background: '#F6F8FC',
-          surface: '#FFFFFF',
+          'background': '#F6F8FC',
+          'surface': '#FFFFFF',
           'surface-variant': '#E9EDF5',
 
-          primary: '#2563EB',
-          secondary: '#7C3AED',
+          'primary': '#2563EB',
+          'secondary': '#7C3AED',
 
-          success: '#10B981',
-          warning: '#F59E0B',
-          error: '#EF4444',
-          info: '#2563EB',
+          'success': '#10B981',
+          'warning': '#F59E0B',
+          'error': '#EF4444',
+          'info': '#2563EB',
 
           'on-background': '#111827',
           'on-surface': '#111827',
@@ -47,17 +46,17 @@ export default createVuetify({
       dark: {
         dark: true,
         colors: {
-          background: '#0B1220',
-          surface: '#111C2E',
+          'background': '#0B1220',
+          'surface': '#111C2E',
           'surface-variant': '#263449',
 
-          primary: '#60A5FA',
-          secondary: '#A78BFA',
+          'primary': '#60A5FA',
+          'secondary': '#A78BFA',
 
-          success: '#34D399',
-          warning: '#FBBF24',
-          error: '#F87171',
-          info: '#60A5FA',
+          'success': '#34D399',
+          'warning': '#FBBF24',
+          'error': '#F87171',
+          'info': '#60A5FA',
 
           'on-background': '#F1F5F9',
           'on-surface': '#F1F5F9',

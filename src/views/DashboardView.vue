@@ -1,39 +1,40 @@
-<script setup>
-import { ref, computed, onMounted } from "vue"
-import { useRouter } from "vue-router"
-import { useFinanzasStore } from "@/stores/finanzas"
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
-const search = ref("")
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
+  const search = ref('')
 
-// Disparar peticiones a la API de Laravel al entrar a la vista
-onMounted(async () => {
-  await Promise.all([
-    finanzas?.cargarBalance(),
-    finanzas?.cargarMovimientos(),
-    finanzas?.cargarCategorias()
-  ])
-})
-
-// Mapeo reactivo compatible con el store y la API
-const transactions = computed(() => finanzas?.movimientos || [])
-const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_incomes ?? 0)
-const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_expenses ?? 0)
-const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.balance ?? 0)
-
-const filteredTransactions = computed(() =>
-  transactions.value.filter((t) => {
-    const texto = `${t.description || ""} ${t.category?.name || ""}`
-    return texto.toLowerCase().includes(search.value.toLowerCase())
+  // Disparar peticiones a la API de Laravel al entrar a la vista
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarBalance(),
+      finanzas?.cargarMovimientos(),
+      finanzas?.cargarCategorias(),
+    ])
   })
-)
 
-const money = (value) =>
-  new Intl.NumberFormat("es-SV", {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(value) || 0)
+  // Mapeo reactivo compatible con el store y la API
+  const transactions = computed(() => finanzas?.movimientos || [])
+  const income = computed(() => finanzas?.totalIngresos ?? finanzas?.balanceData?.total_incomes ?? 0)
+  const expenses = computed(() => finanzas?.totalGastos ?? finanzas?.balanceData?.total_expenses ?? 0)
+  const balance = computed(() => finanzas?.saldoActual ?? finanzas?.balanceData?.balance ?? 0)
+
+  const filteredTransactions = computed(() =>
+    transactions.value.filter(t => {
+      const texto = `${t.description || ''} ${t.category?.name || ''}`
+      return texto.toLowerCase().includes(search.value.toLowerCase())
+    }),
+  )
+
+  function money (value) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Number(value) || 0)
+  }
 </script>
 
 <template>
@@ -45,18 +46,21 @@ const money = (value) =>
           <v-icon size="16">mdi-sparkles</v-icon>
           Tu espacio financiero
         </div>
+
         <h1>¡Hola, {{ finanzas?.nombreCompleto }}! 👋</h1>
+
         <p>
           Aquí tienes un resumen de tus finanzas.
           Sigue avanzando hacia tus metas.
         </p>
       </div>
+
       <v-btn
         color="primary"
+        elevation="0"
+        prepend-icon="mdi-plus"
         rounded="lg"
         size="large"
-        prepend-icon="mdi-plus"
-        elevation="0"
         @click="router.push('/ingresos')"
       >
         Nuevo ingreso
@@ -71,24 +75,30 @@ const money = (value) =>
             <span>Saldo disponible</span>
             <v-icon>mdi-wallet-outline</v-icon>
           </div>
+
           <h2>{{ money(balance) }}</h2>
+
           <div class="card-footer">
             <v-icon size="16">mdi-check-circle</v-icon>
             Balance actual
           </div>
-          <div class="card-decoration"></div>
+
+          <div class="card-decoration" />
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="finance-card" elevation="0">
           <div class="card-top">
             <span>Ingresos totales</span>
+
             <div class="stat-icon income-icon">
               <v-icon>mdi-arrow-down-left</v-icon>
             </div>
           </div>
+
           <h2>{{ money(income) }}</h2>
+
           <div class="card-footer text-success">
             <v-icon size="16">mdi-trending-up</v-icon>
             Dinero recibido
@@ -96,15 +106,18 @@ const money = (value) =>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="finance-card" elevation="0">
           <div class="card-top">
             <span>Gastos totales</span>
+
             <div class="stat-icon expense-icon">
               <v-icon>mdi-arrow-up-right</v-icon>
             </div>
           </div>
+
           <h2>{{ money(expenses) }}</h2>
+
           <div class="card-footer text-error">
             <v-icon size="16">mdi-trending-down</v-icon>
             Dinero utilizado
@@ -120,15 +133,16 @@ const money = (value) =>
           <h3>Movimientos recientes</h3>
           <p>Consulta tus últimas transacciones.</p>
         </div>
+
         <v-text-field
           v-model="search"
-          placeholder="Buscar movimiento..."
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
+          class="search-field"
           density="compact"
           hide-details
+          placeholder="Buscar movimiento..."
+          prepend-inner-icon="mdi-magnify"
           rounded="lg"
-          class="search-field"
+          variant="outlined"
         />
       </div>
 
@@ -141,6 +155,7 @@ const money = (value) =>
             <th class="text-right">Monto</th>
           </tr>
         </thead>
+
         <tbody>
           <tr
             v-for="transaction in filteredTransactions"
@@ -150,22 +165,26 @@ const money = (value) =>
               <div class="transaction-name">
                 <v-avatar
                   :color="transaction.type === 'ingreso' ? 'success' : 'error'"
-                  variant="tonal"
                   size="42"
+                  variant="tonal"
                 >
                   <v-icon>
                     {{ transaction.type === 'ingreso' ? 'mdi-arrow-down-left' : 'mdi-arrow-up-right' }}
                   </v-icon>
                 </v-avatar>
+
                 <strong>{{ transaction.description }}</strong>
               </div>
             </td>
+
             <td>
               <v-chip size="small" variant="tonal">
                 {{ transaction.category?.name }}
               </v-chip>
             </td>
+
             <td>{{ transaction.date }}</td>
+
             <td
               class="text-right font-weight-bold"
               :class="transaction.type === 'ingreso' ? 'text-success' : 'text-error'"
@@ -173,8 +192,9 @@ const money = (value) =>
               {{ transaction.type === 'ingreso' ? '+' : '-' }}{{ money(transaction.amount) }}
             </td>
           </tr>
+
           <tr v-if="filteredTransactions.length === 0">
-            <td colspan="4" class="text-center py-8">
+            <td class="text-center py-8" colspan="4">
               No se encontraron movimientos.
             </td>
           </tr>

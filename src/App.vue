@@ -1,22 +1,21 @@
+<script setup lang="ts">
+  import { computed } from 'vue'
+  import { useRoute } from 'vue-router'
+  import AdminLayout from '@/components/AdminLayout.vue'
+  import MainLayout from '@/components/MainLayout.vue'
 
-<script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import MainLayout from '@/components/MainLayout.vue'
-import AdminLayout from '@/components/AdminLayout.vue'
+  const route = useRoute()
 
-const route = useRoute()
+  const paginasPublicas = new Set(['/', '/registro'])
 
-const paginasPublicas = ['/', '/registro']
+  const esPaginaPublica = computed(() =>
+    paginasPublicas.has(route.path),
+  )
 
-const esPaginaPublica = computed(() =>
-  paginasPublicas.includes(route.path)
-)
-
-const esAdministrador = computed(() =>
-  route.path === '/admin' ||
-  route.path.startsWith('/admin/')
-)
+  const esAdministrador = computed(() =>
+    route.path === '/admin'
+    || route.path.startsWith('/admin/'),
+  )
 </script>
 
 <template>
