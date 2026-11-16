@@ -1,16 +1,24 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { computed, onMounted, ref } from 'vue'
   import { useRouter } from 'vue-router'
   import { useFinanzasStore } from '@/stores/finanzas'
 
   const router = useRouter()
   const finanzas = useFinanzasStore()
 
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarCategorias(),
+      finanzas?.cargarMovimientos(),
+      finanzas?.cargarBalance(),
+    ])
+  })
+
   const categoriasGastos = computed(() =>
     (finanzas?.categorias || [])
-      .filter(categoria => categoria.type === 'gasto')
+      .filter(categoria => (categoria.type ?? categoria.tipo) === 'gasto')
       .map(categoria => ({
-        title: categoria.name,
+        title: categoria.name ?? categoria.nombre,
         value: categoria.id,
       })),
   )
@@ -60,7 +68,7 @@
 
     guardando.value = true
 
-    finanzas?.agregarMovimiento({
+    const res = await finanzas?.agregarMovimiento({
       amount: Number(monto.value),
       type: 'gasto',
       category_id: categoria.value,
@@ -69,6 +77,10 @@
     })
 
     guardando.value = false
+    if (!res?.ok) {
+      return
+    }
+
     dialog.value = false
 
     concepto.value = ''
@@ -234,26 +246,15 @@
     <v-dialog v-model="dialog" max-width="530">
       <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-title">
-          <div>
-            <h3>Registrar gasto</h3>
-            <p>Agrega una nueva salida de dinero.</p>
-          </div>
-
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="dialog = false"
-          />
+          <h3>Nuevo gasto</h3>
         </v-card-title>
 
         <v-card-text>
           <v-form ref="form" @submit.prevent="guardarGasto">
 
-            <label>Concepto</label>
-
             <v-text-field
               v-model="concepto"
-              class="mt-2 mb-2"
+              class="mb-3"
               placeholder="Ej. Almuerzo universitario"
               prepend-inner-icon="mdi-text-box-outline"
               rounded="lg"
@@ -265,7 +266,7 @@
 
             <v-text-field
               v-model="monto"
-              class="mt-2 mb-2"
+              class="mt-2 mb-3"
               min="0.01"
               placeholder="0.00"
               prepend-inner-icon="mdi-currency-usd"
@@ -277,13 +278,16 @@
             />
 
             <!-- CATEGORÍA -->
-            <div class="form-field">
+            <div class="form-field mb-3">
               <label>Categoría</label>
 
               <v-select
                 v-model="categoria"
                 class="mt-2"
+                item-title="title"
+                item-value="value"
                 :items="categoriasGastos"
+                :menu-props="{ maxHeight: 300 }"
                 placeholder="Selecciona una categoría"
                 prepend-inner-icon="mdi-shape-outline"
                 rounded="lg"
@@ -292,6 +296,7 @@
               />
 
               <v-btn
+                v-if="categoriasGastos.length === 0"
                 class="category-button"
                 color="primary"
                 prepend-icon="mdi-plus-circle-outline"
@@ -304,7 +309,7 @@
             </div>
 
             <!-- FECHA -->
-            <div class="form-field">
+            <div class="form-field mb-3">
               <label>Fecha</label>
 
               <v-text-field
@@ -321,7 +326,7 @@
 
             <v-textarea
               v-model="descripcion"
-              class="mt-2"
+              class="mt-2 mb-2"
               placeholder="Detalles adicionales..."
               rounded="lg"
               rows="2"
