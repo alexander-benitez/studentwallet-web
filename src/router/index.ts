@@ -124,11 +124,19 @@ const router = createRouter({
 // Guard de seguridad para proteger rutas
 router.beforeEach(to => {
   const token = localStorage.getItem('auth_token')
-  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
-  const rol = userInfo?.rol || userInfo?.role
+  let userInfo: Record<string, unknown> = {}
+  try {
+    userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
+  } catch {
+    userInfo = {}
+  }
+  const rol = (userInfo as { rol?: string; role?: string })?.rol || (userInfo as { rol?: string; role?: string })?.role
 
   if (to.path.startsWith('/admin') && rol !== 'administrador') {
     return '/'
+  }
+  if (to.path === '/' && token) {
+    return rol === 'administrador' ? '/admin' : '/dashboard'
   }
   if (to.path !== '/' && to.path !== '/registro' && to.path !== '/reset-password' && !token) {
     return '/'
