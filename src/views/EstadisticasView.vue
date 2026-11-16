@@ -62,7 +62,7 @@
   const finanzas = computed(() => ({
     ingresos: totalIngresos.value,
     gastos: totalGastos.value,
-    saldo: saldoBalance.value ?? (totalIngresos.value - totalGastos.value),
+    saldo: saldoBalance.value != null ? saldoBalance.value : (totalIngresos.value - totalGastos.value),
   }))
 
   async function cargarEstadisticas () {
