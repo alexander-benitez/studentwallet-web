@@ -44,14 +44,20 @@ export const useFinanzasStore = defineStore('finanzas', () => {
   // Normaliza una categoría para que las vistas tengan siempre el mismo formato
   function normalizarCategoria (raw = {}, fallback = {}) {
     const tipo = raw.type ?? raw.tipo ?? fallback.type ?? fallback.tipo ?? 'gasto'
+    const nombre = raw.nombre ?? raw.name ?? fallback.nombre ?? fallback.name ?? ''
+    const icono = raw.icono ?? raw.icon ?? fallback.icono ?? fallback.icon ?? 'mdi-tag-outline'
+    const color = raw.color ?? fallback.color ?? '#2563EB'
     return {
       ...fallback,
       ...raw,
       id: raw.id ?? fallback.id,
-      nombre: raw.nombre ?? raw.name ?? fallback.nombre ?? fallback.name ?? '',
+      name: nombre,
+      nombre,
+      type: tipo,
       tipo,
-      icono: raw.icono ?? raw.icon ?? fallback.icono ?? 'mdi-tag-outline',
-      color: raw.color ?? fallback.color ?? '#2563EB',
+      icon: icono,
+      icono,
+      color,
     }
   }
 
@@ -182,13 +188,14 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         headers: getHeaders(),
         body: JSON.stringify(payload),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       if (res.ok) {
-        const creada = normalizarCategoria(json.data || json, data)
-        categorias.value.push(creada)
-        return { ok: true, mensaje: 'Categoría creada correctamente', data: creada }
+        const creada = normalizarCategoria(json.data || json, { ...data, ...payload })
+        const idx = categorias.value.findIndex(c => String(c.id) === String(creada.id))
+        if (idx === -1) categorias.value.push(creada)
+        else categorias.value[idx] = creada
+        return { ok: true, mensaje: json.message || 'Categoría creada correctamente', data: creada }
       }
-      console.error('ERROR BACKEND:', json)
       console.error('Error al crear categoría:', res.status, json)
       return {
         ok: false,
@@ -214,7 +221,7 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         headers: getHeaders(),
         body: JSON.stringify(payload),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       if (res.ok) {
         const index = categorias.value.findIndex(
           categoria => String(categoria.id) === String(id),
@@ -223,13 +230,14 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         const actualizada = normalizarCategoria(json.data || json, {
           ...base,
           ...data,
+          ...payload,
         })
         if (index === -1) {
           categorias.value.push(actualizada)
         } else {
           categorias.value[index] = actualizada
         }
-        return { ok: true, mensaje: 'Categoría actualizada correctamente', data: actualizada }
+        return { ok: true, mensaje: json.message || 'Categoría actualizada correctamente', data: actualizada }
       }
       console.error('Error al actualizar categoría:', res.status, json)
       return {

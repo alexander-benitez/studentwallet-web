@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
   import { useFinanzasStore } from '@/stores/finanzas'
 
@@ -11,7 +11,7 @@
   const presupuestoEliminar = ref(null)
   const form = ref(null)
 
-  const categoria = ref(null)
+  const categoriaId = ref(null)
   const limite = ref(null)
   const mes = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
   const mesSeleccionado = ref(new Date().toLocaleDateString('en-CA').slice(0, 7))
@@ -37,15 +37,32 @@
     { nombre: 'Diciembre', valor: '12' },
   ]
 
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorAlerta = ref('success')
+
+  async function cargarDatosPresupuestos () {
+    const [year, month] = mesSeleccionado.value.split('-').map(Number)
+    await Promise.all([
+      finanzas?.cargarCategorias(),
+      finanzas?.cargarMovimientos(),
+      finanzas?.cargarPresupuestos(month, year),
+    ])
+  }
+
+  onMounted(async () => {
+    await cargarDatosPresupuestos()
+  })
+
+  watch(mesSeleccionado, async () => {
+    await cargarDatosPresupuestos()
+  })
+
   function nombreMes (valor) {
     if (!valor) return 'Seleccionar mes'
-
     const [anio, numeroMes] = valor.split('-')
     const mesEncontrado = meses.find(m => m.valor === numeroMes)
-
-    return mesEncontrado
-      ? `${mesEncontrado.nombre} ${anio}`
-      : valor
+    return mesEncontrado ? `${mesEncontrado.nombre} ${anio}` : valor
   }
 
   function seleccionarMes (valor) {
@@ -58,75 +75,59 @@
     menuMesFormulario.value = false
   }
 
-  const snackbar = ref(false)
-  const mensaje = ref('')
-  const colorAlerta = ref('success')
-
-  const categorias = [
-    { title: 'Alimentación', icon: 'mdi-food', color: '#F59E0B' },
-    { title: 'Transporte', icon: 'mdi-bus', color: '#2563EB' },
-    { title: 'Educación', icon: 'mdi-school', color: '#7C3AED' },
-    { title: 'Entretenimiento', icon: 'mdi-gamepad-variant', color: '#EC4899' },
-    { title: 'Salud', icon: 'mdi-medical-bag', color: '#10B981' },
-    { title: 'Compras', icon: 'mdi-shopping', color: '#06B6D4' },
-    { title: 'Otros', icon: 'mdi-dots-horizontal-circle', color: '#64748B' },
-  ]
-
-  const presupuestosMes = computed(() =>
-    (finanzas?.presupuestos || [])
-      .filter(p => p.month === mesSeleccionado.value)
-      .map(p => {
-        const gastado = (finanzas?.movimientos || [])
-          .filter(m =>
-            m.type === 'expense'
-            && m.category === p.category
-            && m.date?.startsWith(p.month),
-          )
-          .reduce((total, m) => total + Number(m.amount), 0)
-
-        const porcentaje = p.limit > 0
-          ? (gastado / p.limit) * 100
-          : 0
-
-        const info = categorias.find(c => c.title === p.category)
-
-        return {
-          ...p,
-          gastado,
-          disponible: Math.max(0, p.limit - gastado),
-          porcentaje,
-          icon: info?.icon || 'mdi-wallet',
-          color: info?.color || '#2563EB',
-        }
-      }),
+  const categorias = computed(() =>
+    (finanzas?.categorias || []).map(c => ({
+      title: c.name ?? c.nombre,
+      value: c.id,
+      icon: c.icono ?? c.icon ?? 'mdi-wallet',
+      color: c.color ?? '#2563EB',
+      type: c.type ?? c.tipo,
+    })),
   )
 
-  const totalPresupuestado = computed(() =>
-    presupuestosMes.value.reduce((total, p) => total + Number(p.limit), 0),
-  )
+  const presupuestosMes = computed(() => {
+    const [anioSel, mesSel] = mesSeleccionado.value.split('-')
+    return (finanzas?.presupuestos || []).map(p => {
+      const limit = Number(p.amount ?? p.limit ?? 0)
+      const spentApi = p.spent != null ? Number(p.spent) : null
+      const catId = Number(p.category_id ?? p.category?.id)
+      const catName = p.category?.name ?? p.category?.nombre ?? categorias.value.find(c => c.value === catId)?.title ?? 'Categoría'
+      const catInfo = categorias.value.find(c => c.value === catId)
+      const gastado = spentApi != null
+        ? spentApi
+        : (finanzas?.movimientos || [])
+            .filter(m => (m.type === 'gasto' || m.type === 'expense') && Number(m.category?.id ?? m.category_id) === catId && String(m.date || '').startsWith(`${anioSel}-${mesSel}`))
+            .reduce((total, m) => total + Math.abs(Number(m.amount)), 0)
+      const porcentaje = limit > 0 ? (gastado / limit) * 100 : 0
+      return {
+        id: p.id,
+        categoryId: catId,
+        category: catName,
+        month: `${p.year}-${String(p.month).padStart(2, '0')}`,
+        limit,
+        gastado,
+        disponible: Math.max(0, limit - gastado),
+        porcentaje,
+        icon: catInfo?.icon || p.category?.icon || 'mdi-wallet',
+        color: catInfo?.color || p.category?.color || '#2563EB',
+      }
+    })
+  })
 
-  const totalGastado = computed(() =>
-    presupuestosMes.value.reduce((total, p) => total + p.gastado, 0),
-  )
-
-  const disponibles = computed(() =>
-    Math.max(0, totalPresupuestado.value - totalGastado.value),
-  )
+  const totalPresupuestado = computed(() => presupuestosMes.value.reduce((total, p) => total + Number(p.limit), 0))
+  const totalGastado = computed(() => presupuestosMes.value.reduce((total, p) => total + p.gastado, 0))
+  const disponibles = computed(() => Math.max(0, totalPresupuestado.value - totalGastado.value))
 
   function dinero (valor) {
-    return new Intl.NumberFormat('es-SV', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(valor)
+    return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(Number(valor) || 0)
   }
 
   function obligatorio (v) {
-    return !!v || 'Este campo es obligatorio'
+    return (v !== null && v !== undefined && v !== '') || 'Este campo es obligatorio'
   }
 
   function limiteValido (v) {
-    return (Number.isFinite(Number(v)) && Number(v) > 0)
-      || 'Ingresa un límite mayor a cero'
+    return (Number.isFinite(Number(v)) && Number(v) > 0) || 'Ingresa un límite mayor a cero'
   }
 
   function colorProgreso (porcentaje) {
@@ -142,7 +143,7 @@
   }
 
   function abrirFormulario () {
-    categoria.value = null
+    categoriaId.value = null
     limite.value = null
     mes.value = mesSeleccionado.value
     anioFormulario.value = Number(mes.value.slice(0, 4))
@@ -153,16 +154,26 @@
     const resultado = await form.value.validate()
     if (!resultado.valid) return
 
-    finanzas?.guardarPresupuesto({
-      category: categoria.value,
-      month: mes.value,
-      limit: Number(limite.value),
+    const [year, month] = mes.value.split('-').map(Number)
+    const res = await finanzas?.guardarPresupuesto({
+      category_id: Number(categoriaId.value),
+      amount: Number(limite.value),
+      month,
+      year,
     })
+
+    if (!res?.ok) {
+      mensaje.value = res?.mensaje || 'No se pudo guardar el presupuesto'
+      colorAlerta.value = 'error'
+      snackbar.value = true
+      return
+    }
 
     mesSeleccionado.value = mes.value
     dialog.value = false
+    await cargarDatosPresupuestos()
 
-    mensaje.value = 'Presupuesto guardado correctamente'
+    mensaje.value = res?.mensaje || 'Presupuesto guardado correctamente'
     colorAlerta.value = 'success'
     snackbar.value = true
   }
@@ -172,18 +183,23 @@
     dialogEliminar.value = true
   }
 
-  function eliminar () {
-    if (!presupuestoEliminar.value) return
+  async function eliminar () {
+    if (!presupuestoEliminar.value?.id) return
 
-    finanzas?.eliminarPresupuesto(
-      presupuestoEliminar.value.category,
-      presupuestoEliminar.value.month,
-    )
+    const res = await finanzas?.eliminarPresupuesto(presupuestoEliminar.value.id)
 
     dialogEliminar.value = false
     presupuestoEliminar.value = null
 
-    mensaje.value = 'Presupuesto eliminado correctamente'
+    if (!res?.ok) {
+      mensaje.value = res?.mensaje || 'No se pudo eliminar el presupuesto'
+      colorAlerta.value = 'error'
+      snackbar.value = true
+      return
+    }
+
+    await cargarDatosPresupuestos()
+    mensaje.value = res?.mensaje || 'Presupuesto eliminado correctamente'
     colorAlerta.value = 'success'
     snackbar.value = true
   }
@@ -350,7 +366,7 @@
     <v-row v-if="presupuestosMes.length > 0">
       <v-col
         v-for="presupuesto in presupuestosMes"
-        :key="presupuesto.category"
+        :key="presupuesto.id"
         cols="12"
         lg="4"
         md="6"
@@ -489,10 +505,10 @@
             <label>Categoría</label>
 
             <v-select
-              v-model="categoria"
+              v-model="categoriaId"
               class="mt-2 mb-2"
               item-title="title"
-              item-value="title"
+              item-value="value"
               :items="categorias"
               placeholder="Selecciona una categoría"
               prepend-inner-icon="mdi-shape-outline"
@@ -656,7 +672,7 @@
       rounded="lg"
       :timeout="3500"
     >
-      <v-icon class="mr-2">mdi-check-circle</v-icon>
+      <v-icon class="mr-2">{{ colorAlerta === 'error' ? 'mdi-alert-circle' : 'mdi-check-circle' }}</v-icon>
       {{ mensaje }}
     </v-snackbar>
   </v-container>
@@ -717,14 +733,21 @@
   font-weight: 700;
 }
 
-.month-filter input {
-  border: none;
-  outline: none;
-  font: inherit;
-  color: rgb(var(--v-theme-primary));
-  background: transparent;
-  color-scheme: light dark;
-  min-width: 125px;
+.month-picker-card {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  min-width: 280px;
+}
+
+.month-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.month-grid {
+  padding: 12px;
 }
 
 /* TARJETAS DE RESUMEN */
@@ -898,38 +921,39 @@
 }
 
 .dialog-card label {
+  display: block;
+  font-weight: 600;
   font-size: 13px;
-  font-weight: 700;
   color: rgb(var(--v-theme-on-surface));
+}
+
+.month-form-button {
+  justify-content: flex-start;
 }
 
 /* DIÁLOGO DE ELIMINACIÓN */
 .delete-dialog {
-  padding: 30px;
+  padding: 30px 25px;
   text-align: center;
   background: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog h3 {
-  font-size: 21px;
-  margin-top: 15px;
+  margin-top: 12px;
+  font-size: 19px;
+  font-weight: 800;
   color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-dialog p {
+  margin: 12px 0 24px;
+  font-size: 14px;
   color: rgb(var(--v-theme-on-surface-variant));
-  line-height: 1.7;
-  margin-top: 12px;
-}
-
-.delete-dialog p strong {
-  color: rgb(var(--v-theme-on-surface));
 }
 
 .delete-actions {
   justify-content: center;
-  margin-top: 25px;
 }
 
 /* RESPONSIVE */
@@ -942,73 +966,8 @@
     font-size: 26px;
   }
 
-  .month-filter {
-    max-width: 100%;
-    flex-wrap: wrap;
+  .budget-amounts h3 {
+    font-size: 17px;
   }
 }
-
-/* ACCESIBILIDAD */
-@media (prefers-reduced-motion: reduce) {
-  .summary-card,
-  .budget-card {
-    transition: none;
-  }
-.month-filter {
-  flex-wrap: wrap;
-}
-
-.month-filter > span {
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.month-picker-card {
-  min-width: 280px;
-  padding: 14px;
-  border-radius: 18px !important;
-  background: rgb(var(--v-theme-surface));
-  color: rgb(var(--v-theme-on-surface));
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
-}
-
-.month-picker-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 3px 5px 12px;
-}
-
-.month-picker-header strong {
-  font-size: 18px;
-  font-weight: 800;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.month-grid {
-  padding-top: 12px;
-}
-
-.month-grid :deep(.v-btn) {
-  min-width: 0;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-.month-picker-card :deep(.v-divider) {
-  border-color: rgba(var(--v-theme-on-surface), 0.12);
-}
-
-.month-form-button {
-  justify-content: flex-start;
-  min-height: 48px;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-@media (max-width: 600px) {
-  .month-picker-card {
-    min-width: 260px;
-  }
-}
-}
-
 </style>
