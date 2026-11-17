@@ -22,7 +22,7 @@
     return value.endsWith('@gmail.com') || 'Solo se permiten correos @gmail.com'
   }
   function passwordRule (v) {
-    return String(v ?? '').length >= 8 || 'La contraseña debe tener al menos 8 caracteres'
+    return String(v ?? '').length >= 6 || 'La contraseña debe tener al menos 6 caracteres'
   }
   function confirmRule (v) {
     return v === password.value || 'Las contraseñas no coinciden'
@@ -32,7 +32,7 @@
     const p = password.value
     if (!p) return 0
     let score = 0
-    if (p.length >= 8) score += 25
+    if (p.length >= 6) score += 25
     if (/[A-Z]/.test(p)) score += 25
     if (/\d/.test(p)) score += 25
     if (/[^A-Z0-9]/i.test(p)) score += 25
@@ -273,7 +273,7 @@
               autocomplete="new-password"
               class="mt-2"
               :disabled="loading"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Mínimo 6 caracteres"
               prepend-inner-icon="mdi-lock-outline"
               rounded="lg"
               :rules="[required, passwordRule]"

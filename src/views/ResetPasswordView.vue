@@ -32,7 +32,7 @@
   }
 
   function passwordRule (v) {
-    return String(v ?? '').length >= 8 || 'La contraseña debe tener al menos 8 caracteres'
+    return String(v ?? '').length >= 6 || 'La contraseña debe tener al menos 6 caracteres'
   }
 
   function confirmRule (v) {
@@ -156,7 +156,7 @@
               autocomplete="new-password"
               class="mt-2 mb-2"
               :disabled="loading"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Mínimo 6 caracteres"
               prepend-inner-icon="mdi-lock-outline"
               rounded="lg"
               :rules="[required, passwordRule]"

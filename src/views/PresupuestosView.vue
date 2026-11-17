@@ -81,8 +81,12 @@
       value: c.id,
       icon: c.icono ?? c.icon ?? 'mdi-wallet',
       color: c.color ?? '#2563EB',
-      type: c.type ?? c.tipo,
+      type: String(c.type ?? c.tipo ?? '').toLowerCase(),
     })),
+  )
+
+  const categoriasGasto = computed(() =>
+    categorias.value.filter(c => c.type === 'gasto' || c.type === 'expense'),
   )
 
   const presupuestosMes = computed(() => {
@@ -490,7 +494,7 @@
         <v-card-title class="dialog-title">
           <div>
             <h3>Nuevo presupuesto</h3>
-            <p>Establece un límite mensual de gasto.</p>
+            <p>Establece el límite mensual de gasto (solo categorías de gasto).</p>
           </div>
 
           <v-btn
@@ -506,11 +510,14 @@
 
             <v-select
               v-model="categoriaId"
-              class="mt-2 mb-2"
+              class="mt-2 mb-3"
+              hint="Solo se muestran tus categorías de gasto"
               item-title="title"
               item-value="value"
-              :items="categorias"
-              placeholder="Selecciona una categoría"
+              :items="categoriasGasto"
+              no-data-text="No tienes categorías de gasto registradas"
+              persistent-hint
+              placeholder="Selecciona una categoría de gasto"
               prepend-inner-icon="mdi-shape-outline"
               rounded="lg"
               :rules="[obligatorio]"

@@ -2,7 +2,7 @@
 
   import { jsPDF } from 'jspdf'
   import autoTable from 'jspdf-autotable'
-  import { computed, ref } from 'vue'
+  import { computed, onMounted, ref } from 'vue'
   import { useRouter } from 'vue-router'
   import { useFinanzasStore } from '@/stores/finanzas'
 
@@ -220,9 +220,9 @@
 
       const filasMovimientos = movimientos.map(item => [
         item.date || 'Sin fecha',
-        item.name || 'Sin descripción',
-        item.category || 'Sin categoría',
-        item.type === 'income' ? 'Ingreso' : 'Gasto',
+        item.description || item.name || 'Sin descripción',
+        item.category?.name || item.category || 'Sin categoría',
+        item.type === 'ingreso' || item.type === 'income' ? 'Ingreso' : 'Gasto',
         dinero(item.amount),
       ])
 
@@ -302,6 +302,16 @@
     presupuestos: (finanzas?.presupuestos || []).length,
     metas: (finanzas?.metas || []).length,
   }))
+
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarMovimientos?.(),
+      finanzas?.cargarPresupuestos?.(),
+      finanzas?.cargarMetas?.(),
+      finanzas?.cargarBalance?.(),
+      finanzas?.cargarPerfil?.(),
+    ])
+  })
 
 </script>
 
@@ -604,20 +614,7 @@
           </div>
         </v-card>
 
-        <v-alert
-          class="mt-5"
-          rounded="lg"
-          type="info"
-          variant="tonal"
-        >
-          <strong>Almacenamiento local</strong>
 
-          <p class="mt-2">
-            Tus datos se guardan en este navegador.
-            Si borras sus datos o cambias de dispositivo,
-            podrías perder la información.
-          </p>
-        </v-alert>
       </v-col>
     </v-row>
 

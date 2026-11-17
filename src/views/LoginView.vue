@@ -27,8 +27,12 @@
   }
 
   function validEmail (v) {
-    return /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(String(v ?? '').trim())
-      || 'Ingresa un correo electrónico válido'
+    const value = String(v ?? '').trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(value)) {
+      return 'Ingresa un correo electrónico válido'
+    }
+    return value.endsWith('@gmail.com')
+      || 'Solo se aceptan correos @gmail.com'
   }
 
   // MENSAJES
@@ -89,15 +93,25 @@
   async function login () {
     if (loading.value) return
 
-    const resultado = await formulario.value?.validate()
+    const correoTrim = email.value.trim().toLowerCase()
+    const claveTrim = password.value.trim()
 
-    if (!resultado?.valid) {
-      mostrarMensaje('Revisa los campos señalados antes de continuar.')
+    if (!correoTrim || !claveTrim) {
+      await formulario.value?.validate()
+      mostrarMensaje('Completa todos los campos requeridos.')
       return
     }
 
-    if (password.value.length < 6) {
-      mostrarMensaje('La contraseña debe tener al menos 6 caracteres.')
+    const validacionCorreo = validEmail(correoTrim)
+    if (validacionCorreo !== true) {
+      await formulario.value?.validate()
+      mostrarMensaje(validacionCorreo)
+      return
+    }
+
+    const resultado = await formulario.value?.validate()
+    if (!resultado?.valid) {
+      mostrarMensaje('Revisa los campos señalados antes de continuar.')
       return
     }
 
@@ -126,7 +140,7 @@
 
         localStorage.setItem('auth_token', token)
         // Guardar el usuario
-        localStorage.setItem('user_info', JSON.stringify(user))
+        localStorage.setItem('user_info', JSON.stringify({ ...(user || {}), email: user?.email || email.value.trim() }))
 
         // Verificar el rol para redirigir
         const rolUsuario = user?.rol || user?.role || res.data?.rol || res.data?.role
@@ -135,8 +149,10 @@
         } else {
           router.push('/dashboard')
         }
+      } else if (response.status === 429) {
+        mostrarMensaje('Demasiados intentos. Espera un momento e intenta de nuevo.', 'error')
       } else {
-        mostrarMensaje(res.message || 'Credenciales incorrectas.', 'error')
+        mostrarMensaje('Correo o contraseña incorrecto.', 'error')
       }
     } catch (error) {
       console.error('Error de red al conectar con backend:', error)
@@ -213,11 +229,12 @@
           <h2>Bienvenido de nuevo</h2>
 
           <p class="subtitle">
-            Ingresa tus credenciales para continuar.
+            Ingresa tus credenciales para continuar. Utiliza únicamente tu correo
+            <strong>@gmail.com</strong> (no se admiten otros dominios).
           </p>
 
           <v-form ref="formulario" @submit.prevent="login">
-            <div class="mb-6">
+            <div class="d-none">
               <label>Tipo de acceso</label>
 
               <v-item-group v-model="tipoAcceso" class="d-none" mandatory>
@@ -264,7 +281,7 @@
               autocomplete="email"
               class="mt-2 mb-3"
               :disabled="loading"
-              placeholder="ejemplo@correo.com"
+              placeholder="usuario@gmail.com"
               prepend-inner-icon="mdi-email-outline"
               rounded="lg"
               :rules="[required, validEmail]"

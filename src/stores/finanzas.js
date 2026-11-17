@@ -5,6 +5,7 @@ export const useFinanzasStore = defineStore('finanzas', () => {
   const movimientos = ref([])
   const categorias = ref([])
   const presupuestos = ref([])
+  const metas = ref([])
   const balanceData = ref({ balance: 0, total_incomes: 0, total_expenses: 0 })
   const saldo = ref(0)
   const ingresos = ref(0)
@@ -14,6 +15,7 @@ export const useFinanzasStore = defineStore('finanzas', () => {
   const perfil = ref({
     nombre: '',
     apellido: '',
+    correo: '',
     universidad: '',
     carrera: '',
   })
@@ -359,8 +361,36 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     }
   }
 
-  // Cargar el perfil del usuario autenticado desde la API
+  // Cargar metas de ahorro desde la API
+  async function cargarMetas () {
+    try {
+      const res = await fetch(`${API_BASE}/goals`, { headers: getHeaders() })
+      if (res.ok) {
+        const json = await res.json()
+        metas.value = json.data || json || []
+      }
+    } catch (error_) {
+      console.error('Error al cargar metas de ahorro:', error_)
+    }
+  }
+
+  // Cargar el perfil del usuario autenticado desde la API (con respaldo en user_info)
   async function cargarPerfil () {
+    let cached = {}
+    try {
+      cached = JSON.parse(localStorage.getItem('user_info') || '{}') || {}
+    } catch {
+      cached = {}
+    }
+
+    perfil.value = {
+      nombre: cached.name ?? cached.nombre ?? perfil.value.nombre ?? '',
+      apellido: cached.apellido ?? perfil.value.apellido ?? '',
+      correo: cached.email ?? cached.correo ?? perfil.value.correo ?? '',
+      universidad: cached.universidad ?? perfil.value.universidad ?? '',
+      carrera: cached.carrera ?? perfil.value.carrera ?? '',
+    }
+
     try {
       const res = await fetch(`${API_BASE}/user`, { headers: getHeaders() })
       if (res.ok) {
@@ -368,20 +398,23 @@ export const useFinanzasStore = defineStore('finanzas', () => {
         const u = json.data || json
 
         perfil.value = {
-          nombre: u.name ?? u.nombre ?? '',
-          apellido: u.apellido ?? '',
-          universidad: u.universidad ?? '',
-          carrera: u.carrera ?? '',
+          nombre: u.name ?? u.nombre ?? perfil.value.nombre ?? '',
+          apellido: u.apellido ?? perfil.value.apellido ?? '',
+          correo: u.email ?? u.correo ?? perfil.value.correo ?? '',
+          universidad: u.universidad ?? perfil.value.universidad ?? '',
+          carrera: u.carrera ?? perfil.value.carrera ?? '',
         }
-
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
 
         localStorage.setItem(
           'user_info',
           JSON.stringify({
-            ...userInfo,
+            ...cached,
+            ...u,
             name: perfil.value.nombre,
             apellido: perfil.value.apellido,
+            email: perfil.value.correo,
+            universidad: perfil.value.universidad,
+            carrera: perfil.value.carrera,
           }),
         )
       }
@@ -409,6 +442,17 @@ export const useFinanzasStore = defineStore('finanzas', () => {
       const json = await res.json()
 
       if (res.ok) {
+        const cached = JSON.parse(localStorage.getItem('user_info') || '{}') || {}
+        localStorage.setItem(
+          'user_info',
+          JSON.stringify({
+            ...cached,
+            name: payload.name ?? cached.name ?? '',
+            apellido: payload.apellido ?? cached.apellido ?? '',
+            universidad: payload.universidad ?? cached.universidad ?? '',
+            carrera: payload.carrera ?? cached.carrera ?? '',
+          }),
+        )
         await cargarPerfil()
         return { ok: true, mensaje: 'Tu perfil se actualizó correctamente' }
       }
@@ -487,6 +531,7 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     movimientos,
     categorias,
     presupuestos,
+    metas,
     balanceData,
     saldo,
     ingresos,
@@ -504,6 +549,7 @@ export const useFinanzasStore = defineStore('finanzas', () => {
     cargarMovimientos,
     cargarBalance,
     cargarPresupuestos,
+    cargarMetas,
     cargarPerfil,
     actualizarPerfil,
     actualizarConfiguracion,

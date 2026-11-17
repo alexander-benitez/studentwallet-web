@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
   import { useFinanzasStore } from '@/stores/finanzas'
 
@@ -9,6 +9,7 @@
   const formulario = ref(null)
   const guardando = ref(false)
   const snackbar = ref(false)
+  const snackbarColor = ref('success')
   const mensaje = ref('')
 
   const datos = ref({
@@ -30,6 +31,9 @@
   }
 
   cargarPerfil()
+  onMounted(() => {
+    finanzas?.cargarPerfil()
+  })
 
   const nombreVistaPrevia = computed(() => {
     return (
@@ -55,7 +59,7 @@
   }
 
   const hayCambios = computed(() =>
-    ['nombre', 'apellido', 'correo', 'universidad', 'carrera']
+    ['nombre', 'apellido', 'universidad', 'carrera']
       .some(campo =>
         datos.value[campo] !== ((finanzas?.perfil || {})[campo] || ''),
       ),
@@ -74,9 +78,16 @@
     guardando.value = true
 
     try {
-      finanzas?.actualizarPerfil(datos.value)
-      mensaje.value = 'Tu perfil se actualizó correctamente'
-      snackbar.value = true
+      const res = await finanzas?.actualizarPerfil(datos.value)
+      if (res?.ok) {
+        snackbarColor.value = 'success'
+        mensaje.value = res.mensaje || 'Tu perfil se actualizó correctamente'
+        snackbar.value = true
+      } else {
+        snackbarColor.value = 'error'
+        mensaje.value = res?.mensaje || 'No se pudo actualizar tu perfil'
+        snackbar.value = true
+      }
     } finally {
       guardando.value = false
     }
@@ -168,15 +179,6 @@
                 </strong>
               </div>
             </div>
-
-            <v-alert
-              class="mt-6"
-              density="comfortable"
-              type="info"
-              variant="tonal"
-            >
-              Tu información se guarda en este navegador.
-            </v-alert>
           </div>
         </v-card>
       </v-col>
@@ -232,12 +234,16 @@
                 <label>Correo electrónico</label>
 
                 <v-text-field
-                  v-model="datos.correo"
+                  :model-value="datos.correo"
+                  append-inner-icon="mdi-lock-outline"
                   class="mt-2"
-                  placeholder="ejemplo@correo.com"
+                  disabled
+                  hint="Correo vinculado a tu cuenta (no editable)"
+                  persistent-hint
+                  placeholder=""
                   prepend-inner-icon="mdi-email-outline"
+                  readonly
                   rounded="lg"
-                  :rules="[correoValido]"
                   type="email"
                   variant="outlined"
                 />
@@ -305,35 +311,20 @@
             </div>
           </v-form>
         </v-card>
-
-        <!-- INFORMACIÓN ADICIONAL -->
-        <v-card class="info-card mt-5" elevation="0">
-          <v-icon color="primary" size="28">
-            mdi-shield-check-outline
-          </v-icon>
-
-          <div>
-            <h3>Tu información personal</h3>
-
-            <p>
-              Los datos de este perfil se almacenan localmente.
-              Por ahora no están sincronizados con una cuenta
-              ni con una base de datos.
-            </p>
-          </div>
-        </v-card>
       </v-col>
     </v-row>
 
     <!-- NOTIFICACIÓN -->
     <v-snackbar
       v-model="snackbar"
-      color="success"
+      :color="snackbarColor"
       location="top right"
       rounded="lg"
       :timeout="3500"
     >
-      <v-icon class="mr-2">mdi-check-circle-outline</v-icon>
+      <v-icon class="mr-2">
+        {{ snackbarColor === 'success' ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline' }}
+      </v-icon>
       {{ mensaje }}
     </v-snackbar>
   </v-container>
