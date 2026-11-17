@@ -1,267 +1,269 @@
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+  const router = useRouter()
 
-const router = useRouter()
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+  const dialogMeta = ref(false)
+  const dialogAhorro = ref(false)
+  const dialogEliminar = ref(false)
 
-const dialogMeta = ref(false)
-const dialogAhorro = ref(false)
-const dialogEliminar = ref(false)
+  const formMeta = ref(null)
+  const formAhorro = ref(null)
 
-const formMeta = ref(null)
-const formAhorro = ref(null)
+  const nombre = ref('')
+  const objetivo = ref(null)
+  const fechaLimite = ref('')
+  const icono = ref('mdi-bullseye-arrow')
 
-const nombre = ref('')
-const objetivo = ref(null)
-const fechaLimite = ref('')
-const icono = ref('mdi-bullseye-arrow')
+  const metaSeleccionada = ref(null)
+  const cantidadAhorro = ref(null)
 
-const metaSeleccionada = ref(null)
-const cantidadAhorro = ref(null)
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorMensaje = ref('success')
 
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorMensaje = ref('success')
+  const goals = ref([])
 
-const goals = ref([])
+  const iconos = [
+    { title: 'Objetivo general', value: 'mdi-bullseye-arrow' },
+    { title: 'Laptop', value: 'mdi-laptop' },
+    { title: 'Universidad', value: 'mdi-school' },
+    { title: 'Viaje', value: 'mdi-airplane' },
+    { title: 'Celular', value: 'mdi-cellphone' },
+    { title: 'Emergencias', value: 'mdi-shield-check' },
+    { title: 'Compras', value: 'mdi-shopping-outline' },
+  ]
 
-const iconos = [
-  { title: 'Objetivo general', value: 'mdi-bullseye-arrow' },
-  { title: 'Laptop', value: 'mdi-laptop' },
-  { title: 'Universidad', value: 'mdi-school' },
-  { title: 'Viaje', value: 'mdi-airplane' },
-  { title: 'Celular', value: 'mdi-cellphone' },
-  { title: 'Emergencias', value: 'mdi-shield-check' },
-  { title: 'Compras', value: 'mdi-shopping-outline' },
-]
-
-const dinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-
-const obligatorio = v =>
-  !!String(v ?? '').trim() || 'Este campo es obligatorio'
-
-const montoValido = v =>
-  (Number.isFinite(Number(v)) && Number(v) > 0) ||
-  'Ingresa una cantidad mayor que cero'
-
-function getHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
   }
-}
 
-const metas = computed(() =>
-  goals.value.map(meta => {
-    const objetivoMeta = Number(meta.target_amount) || 0
-    const ahorrado = Number(meta.current_amount) || 0
+  function obligatorio (v) {
+    return !!String(v ?? '').trim() || 'Este campo es obligatorio'
+  }
 
+  function montoValido (v) {
+    return (Number.isFinite(Number(v)) && Number(v) > 0)
+      || 'Ingresa una cantidad mayor que cero'
+  }
+
+  function getHeaders () {
     return {
-      ...meta,
-      icon: meta.icon || 'mdi-bullseye-arrow',
-      target: objetivoMeta,
-      saved: ahorrado,
-      porcentaje: objetivoMeta > 0
-        ? Math.min((ahorrado / objetivoMeta) * 100, 100)
-        : 0,
-      restante: Math.max(objetivoMeta - ahorrado, 0),
-      completada: ahorrado >= objetivoMeta,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
     }
-  })
-)
-
-const finanzas = computed(() => ({
-  totalAhorrado: metas.value.reduce(
-    (total, m) => total + Number(m.saved || 0),
-    0
-  ),
-}))
-
-const metasCompletadas = computed(() =>
-  metas.value.filter(m => m.completada).length
-)
-
-const objetivoTotal = computed(() =>
-  metas.value.reduce((total, m) => total + Number(m.target), 0)
-)
-
-function notificar(texto, color = 'success') {
-  mensaje.value = texto
-  colorMensaje.value = color
-  snackbar.value = true
-}
-
-async function cargarMetas() {
-  try {
-    const respuesta = await fetch(`${API_BASE}/goals`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    })
-
-    if (!respuesta.ok) {
-      notificar('No se pudieron cargar tus metas', 'error')
-      return
-    }
-
-    const datos = await respuesta.json()
-    goals.value = datos.data || []
-  } catch (error) {
-    console.error('Error al cargar las metas:', error)
-    notificar('No se pudieron cargar tus metas', 'error')
   }
-}
 
-async function crearMeta() {
-  const respuesta = await fetch(`${API_BASE}/goals`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      name: nombre.value.trim(),
-      target_amount: Number(objetivo.value),
-      deadline: fechaLimite.value || null,
+  const metas = computed(() =>
+    goals.value.map(meta => {
+      const objetivoMeta = Number(meta.target_amount) || 0
+      const ahorrado = Number(meta.current_amount) || 0
+
+      return {
+        ...meta,
+        icon: meta.icon || 'mdi-bullseye-arrow',
+        target: objetivoMeta,
+        saved: ahorrado,
+        porcentaje: objetivoMeta > 0
+          ? Math.min((ahorrado / objetivoMeta) * 100, 100)
+          : 0,
+        restante: Math.max(objetivoMeta - ahorrado, 0),
+        completada: ahorrado >= objetivoMeta,
+      }
     }),
-  })
+  )
 
-  return respuesta.ok
-}
+  const finanzas = computed(() => ({
+    totalAhorrado: metas.value.reduce(
+      (total, m) => total + Number(m.saved || 0),
+      0,
+    ),
+  }))
 
-async function agregarAporte() {
-  if (!metaSeleccionada.value) return false
+  const metasCompletadas = computed(() =>
+    metas.value.filter(m => m.completada).length,
+  )
 
-  const respuesta = await fetch(
-    `${API_BASE}/goals/${metaSeleccionada.value.id}/contributions`,
-    {
+  const objetivoTotal = computed(() =>
+    metas.value.reduce((total, m) => total + Number(m.target), 0),
+  )
+
+  function notificar (texto, color = 'success') {
+    mensaje.value = texto
+    colorMensaje.value = color
+    snackbar.value = true
+  }
+
+  async function cargarMetas () {
+    try {
+      const respuesta = await fetch(`${API_BASE}/goals`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      })
+
+      if (!respuesta.ok) {
+        notificar('No se pudieron cargar tus metas', 'error')
+        return
+      }
+
+      const datos = await respuesta.json()
+      goals.value = datos.data || []
+    } catch (error) {
+      console.error('Error al cargar las metas:', error)
+      notificar('No se pudieron cargar tus metas', 'error')
+    }
+  }
+
+  async function crearMeta () {
+    const respuesta = await fetch(`${API_BASE}/goals`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
-        amount: Number(cantidadAhorro.value),
-        note: null,
+        name: nombre.value.trim(),
+        target_amount: Number(objetivo.value),
+        deadline: fechaLimite.value || null,
       }),
-    }
-  )
+    })
 
-  return respuesta.ok
-}
-
-function abrirMeta() {
-  nombre.value = ''
-  objetivo.value = null
-  fechaLimite.value = ''
-  icono.value = 'mdi-bullseye-arrow'
-  dialogMeta.value = true
-}
-
-async function guardarMeta() {
-  const resultado = await formMeta.value.validate()
-  if (!resultado.valid) return
-
-  try {
-    if (!(await crearMeta())) {
-      notificar('No se pudo crear la meta', 'error')
-      return
-    }
-
-    await cargarMetas()
-    dialogMeta.value = false
-    notificar('Meta de ahorro creada correctamente')
-  } catch (error) {
-    console.error('Error al crear la meta:', error)
-    notificar('No se pudo crear la meta', 'error')
+    return respuesta.ok
   }
-}
 
-function abrirAhorro(meta) {
-  metaSeleccionada.value = meta
-  cantidadAhorro.value = null
-  dialogAhorro.value = true
-}
+  async function agregarAporte () {
+    if (!metaSeleccionada.value) return false
 
-async function guardarAhorro() {
-  const resultado = await formAhorro.value.validate()
-  if (!resultado.valid || !metaSeleccionada.value) return
-
-  try {
-    if (!(await agregarAporte())) {
-      notificar('No se pudo registrar el ahorro', 'error')
-      return
-    }
-
-    await cargarMetas()
-    dialogAhorro.value = false
-    notificar('Ahorro agregado correctamente')
-  } catch (error) {
-    console.error('Error al agregar el ahorro:', error)
-    notificar('No se pudo registrar el ahorro', 'error')
-  }
-}
-
-function confirmarEliminar(meta) {
-  metaSeleccionada.value = meta
-  dialogEliminar.value = true
-}
-
-async function eliminarMeta() {
-  if (!metaSeleccionada.value) return
-
-  try {
     const respuesta = await fetch(
-      `${API_BASE}/goals/${metaSeleccionada.value.id}`,
-      { method: 'DELETE', headers: getHeaders() }
+      `${API_BASE}/goals/${metaSeleccionada.value.id}/contributions`,
+      {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          amount: Number(cantidadAhorro.value),
+          note: null,
+        }),
+      },
     )
 
-    if (!respuesta.ok) {
-      notificar('No se pudo eliminar la meta', 'error')
-      return
-    }
-
-    await cargarMetas()
-    dialogEliminar.value = false
-    metaSeleccionada.value = null
-    notificar('Meta eliminada correctamente')
-  } catch (error) {
-    console.error('Error al eliminar la meta:', error)
-    notificar('No se pudo eliminar la meta', 'error')
+    return respuesta.ok
   }
-}
 
-function formatearFecha(fecha) {
-  if (!fecha) return 'Sin fecha límite'
+  function abrirMeta () {
+    nombre.value = ''
+    objetivo.value = null
+    fechaLimite.value = ''
+    icono.value = 'mdi-bullseye-arrow'
+    dialogMeta.value = true
+  }
 
-  const [anio, mes, dia] = String(fecha).slice(0, 10).split('-').map(Number)
-  if (!anio || !mes || !dia) return fecha
+  async function guardarMeta () {
+    const resultado = await formMeta.value.validate()
+    if (!resultado.valid) return
 
-  return new Date(anio, mes - 1, dia).toLocaleDateString('es-SV', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+    try {
+      if (!(await crearMeta())) {
+        notificar('No se pudo crear la meta', 'error')
+        return
+      }
+
+      await cargarMetas()
+      dialogMeta.value = false
+      notificar('Meta de ahorro creada correctamente')
+    } catch (error) {
+      console.error('Error al crear la meta:', error)
+      notificar('No se pudo crear la meta', 'error')
+    }
+  }
+
+  function abrirAhorro (meta) {
+    metaSeleccionada.value = meta
+    cantidadAhorro.value = null
+    dialogAhorro.value = true
+  }
+
+  async function guardarAhorro () {
+    const resultado = await formAhorro.value.validate()
+    if (!resultado.valid || !metaSeleccionada.value) return
+
+    try {
+      if (!(await agregarAporte())) {
+        notificar('No se pudo registrar el ahorro', 'error')
+        return
+      }
+
+      await cargarMetas()
+      dialogAhorro.value = false
+      notificar('Ahorro agregado correctamente')
+    } catch (error) {
+      console.error('Error al agregar el ahorro:', error)
+      notificar('No se pudo registrar el ahorro', 'error')
+    }
+  }
+
+  function confirmarEliminar (meta) {
+    metaSeleccionada.value = meta
+    dialogEliminar.value = true
+  }
+
+  async function eliminarMeta () {
+    if (!metaSeleccionada.value) return
+
+    try {
+      const respuesta = await fetch(
+        `${API_BASE}/goals/${metaSeleccionada.value.id}`,
+        { method: 'DELETE', headers: getHeaders() },
+      )
+
+      if (!respuesta.ok) {
+        notificar('No se pudo eliminar la meta', 'error')
+        return
+      }
+
+      await cargarMetas()
+      dialogEliminar.value = false
+      metaSeleccionada.value = null
+      notificar('Meta eliminada correctamente')
+    } catch (error) {
+      console.error('Error al eliminar la meta:', error)
+      notificar('No se pudo eliminar la meta', 'error')
+    }
+  }
+
+  function formatearFecha (fecha) {
+    if (!fecha) return 'Sin fecha límite'
+
+    const [anio, mes, dia] = String(fecha).slice(0, 10).split('-').map(Number)
+    if (!anio || !mes || !dia) return fecha
+
+    return new Date(anio, mes - 1, dia).toLocaleDateString('es-SV', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  onMounted(() => {
+    cargarMetas()
   })
-}
-
-onMounted(() => {
-  cargarMetas()
-})
 </script>
 
 <template>
-  <v-container fluid class="goals-page pa-4 pa-md-8">
+  <v-container class="goals-page pa-4 pa-md-8" fluid>
     <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
-          color="primary"
-          variant="text"
-          prepend-icon="mdi-arrow-left"
           class="mb-3"
+          color="primary"
+          prepend-icon="mdi-arrow-left"
+          variant="text"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
@@ -273,9 +275,9 @@ onMounted(() => {
 
       <v-btn
         color="primary"
-        size="large"
-        rounded="lg"
         prepend-icon="mdi-plus"
+        rounded="lg"
+        size="large"
         @click="abrirMeta"
       >
         Nueva meta
@@ -290,28 +292,31 @@ onMounted(() => {
             <span>Total ahorrado</span>
             <v-icon>mdi-piggy-bank-outline</v-icon>
           </div>
+
           <h2>{{ dinero(finanzas?.totalAhorrado) }}</h2>
           <p>Acumulado en todas tus metas</p>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-heading">
             <span>Objetivo total</span>
             <v-icon color="primary">mdi-target</v-icon>
           </div>
+
           <h2>{{ dinero(objetivoTotal) }}</h2>
           <p>Dinero que deseas ahorrar</p>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-heading">
             <span>Metas completadas</span>
             <v-icon color="success">mdi-check-decagram</v-icon>
           </div>
+
           <h2>{{ metasCompletadas }} / {{ metas.length }}</h2>
           <p>Objetivos que has alcanzado</p>
         </v-card>
@@ -330,27 +335,27 @@ onMounted(() => {
       </v-chip>
     </div>
 
-    <v-row v-if="metas.length">
+    <v-row v-if="metas.length > 0">
       <v-col
         v-for="meta in metas"
         :key="meta.id"
         cols="12"
-        md="6"
         lg="4"
+        md="6"
       >
         <v-card class="goal-card" elevation="0">
           <div class="goal-top">
             <div class="goal-icon">
-              <v-icon size="28" color="primary">
+              <v-icon color="primary" size="28">
                 {{ meta.icon }}
               </v-icon>
             </div>
 
             <v-btn
-              icon="mdi-delete-outline"
               color="error"
-              variant="text"
+              icon="mdi-delete-outline"
               size="small"
+              variant="text"
               @click="confirmarEliminar(meta)"
             />
           </div>
@@ -368,11 +373,11 @@ onMounted(() => {
           </div>
 
           <v-progress-linear
-            :model-value="meta.porcentaje"
+            class="mt-4"
             :color="meta.completada ? 'success' : 'primary'"
             height="11"
+            :model-value="meta.porcentaje"
             rounded
-            class="mt-4"
           />
 
           <div class="progress-details">
@@ -382,10 +387,10 @@ onMounted(() => {
 
           <v-alert
             v-if="meta.completada"
+            class="mt-5"
+            density="compact"
             type="success"
             variant="tonal"
-            density="compact"
-            class="mt-5"
           >
             ¡Felicidades! Has alcanzado tu meta.
           </v-alert>
@@ -393,10 +398,10 @@ onMounted(() => {
           <v-btn
             v-else
             block
-            color="primary"
-            rounded="lg"
-            prepend-icon="mdi-plus-circle-outline"
             class="mt-5"
+            color="primary"
+            prepend-icon="mdi-plus-circle-outline"
+            rounded="lg"
             @click="abrirAhorro(meta)"
           >
             Agregar ahorro
@@ -407,19 +412,20 @@ onMounted(() => {
 
     <!-- ESTADO VACÍO -->
     <v-card v-else class="empty-state" elevation="0">
-      <v-icon size="70" color="grey-lighten-1">
+      <v-icon color="grey-lighten-1" size="70">
         mdi-piggy-bank-outline
       </v-icon>
 
       <h3>Empieza a cumplir tus metas</h3>
+
       <p>
         Crea un objetivo, registra tus ahorros y observa cómo avanzas.
       </p>
 
       <v-btn
         color="primary"
-        rounded="lg"
         prepend-icon="mdi-plus"
+        rounded="lg"
         @click="abrirMeta"
       >
         Crear mi primera meta
@@ -428,7 +434,7 @@ onMounted(() => {
 
     <!-- FORMULARIO NUEVA META -->
     <v-dialog v-model="dialogMeta" max-width="500">
-      <v-card rounded="xl" class="dialog-card">
+      <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-header">
           <div>
             <h3>Nueva meta de ahorro</h3>
@@ -445,60 +451,61 @@ onMounted(() => {
         <v-card-text>
           <v-form ref="formMeta" @submit.prevent="guardarMeta">
             <label>Nombre de la meta</label>
+
             <v-text-field
               v-model="nombre"
+              class="mt-2 mb-2"
               placeholder="Ej. Comprar una laptop"
               prepend-inner-icon="mdi-pencil-outline"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio]"
-              class="mt-2 mb-2"
+              variant="outlined"
             />
 
             <label>Cantidad objetivo (USD)</label>
+
             <v-text-field
               v-model="objetivo"
-              type="number"
+              class="mt-2 mb-2"
               min="0.01"
-              step="0.01"
               placeholder="Ej. 600"
               prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio, montoValido]"
-              class="mt-2 mb-2"
+              step="0.01"
+              type="number"
+              variant="outlined"
             />
 
             <label>Fecha objetivo (opcional)</label>
+
             <v-text-field
               v-model="fechaLimite"
+              class="mt-2 mb-2"
+              rounded="lg"
               type="date"
               variant="outlined"
-              rounded="lg"
-              class="mt-2 mb-2"
             />
 
             <label>Ícono de la meta</label>
 
-<v-select
-  v-model="icono"
-  :items="iconos"
-  item-title="title"
-  item-value="value"
-  variant="outlined"
-  rounded="lg"
-  class="mt-2 mb-4"
->
-</v-select>
-
+            <v-select
+              v-model="icono"
+              class="mt-2 mb-4"
+              item-title="title"
+              item-value="value"
+              :items="iconos"
+              rounded="lg"
+              variant="outlined"
+            />
 
             <v-btn
-              type="submit"
-              color="primary"
-              size="large"
               block
-              rounded="lg"
+              color="primary"
               prepend-icon="mdi-content-save-outline"
+              rounded="lg"
+              size="large"
+              type="submit"
             >
               Crear meta
             </v-btn>
@@ -509,7 +516,7 @@ onMounted(() => {
 
     <!-- FORMULARIO AGREGAR AHORRO -->
     <v-dialog v-model="dialogAhorro" max-width="440">
-      <v-card rounded="xl" class="dialog-card">
+      <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-header">
           <div>
             <h3>Agregar ahorro</h3>
@@ -525,10 +532,10 @@ onMounted(() => {
 
         <v-card-text>
           <v-alert
+            class="mb-5"
+            density="comfortable"
             type="info"
             variant="tonal"
-            density="comfortable"
-            class="mb-5"
           >
             Te faltan
             {{ dinero(metaSeleccionada?.restante || 0) }}
@@ -537,26 +544,27 @@ onMounted(() => {
 
           <v-form ref="formAhorro" @submit.prevent="guardarAhorro">
             <label>Cantidad a ahorrar (USD)</label>
+
             <v-text-field
               v-model="cantidadAhorro"
-              type="number"
+              class="mt-2 mb-4"
               min="0.01"
-              step="0.01"
               placeholder="Ej. 25"
               prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio, montoValido]"
-              class="mt-2 mb-4"
+              step="0.01"
+              type="number"
+              variant="outlined"
             />
 
             <v-btn
-              type="submit"
-              color="primary"
-              size="large"
               block
-              rounded="lg"
+              color="primary"
               prepend-icon="mdi-piggy-bank-outline"
+              rounded="lg"
+              size="large"
+              type="submit"
             >
               Guardar ahorro
             </v-btn>
@@ -567,8 +575,8 @@ onMounted(() => {
 
     <!-- CONFIRMACIÓN DE ELIMINACIÓN -->
     <v-dialog v-model="dialogEliminar" max-width="420">
-      <v-card rounded="xl" class="delete-dialog">
-        <v-icon size="48" color="error">
+      <v-card class="delete-dialog" rounded="xl">
+        <v-icon color="error" size="48">
           mdi-delete-alert-outline
         </v-icon>
 
@@ -582,8 +590,8 @@ onMounted(() => {
 
         <div class="delete-actions">
           <v-btn
-            variant="outlined"
             rounded="lg"
+            variant="outlined"
             @click="dialogEliminar = false"
           >
             Cancelar

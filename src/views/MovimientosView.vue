@@ -1,98 +1,99 @@
+<script setup lang="ts">
+  import { computed, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
+  const busqueda = ref('')
+  const filtroTipo = ref('todos')
+  const filtroCategoria = ref('Todas')
+  const dialogEliminar = ref(false)
+  const movimientoSeleccionado = ref(null)
+  const snackbar = ref(false)
 
-const busqueda = ref('')
-const filtroTipo = ref('todos')
-const filtroCategoria = ref('Todas')
-const dialogEliminar = ref(false)
-const movimientoSeleccionado = ref(null)
-const snackbar = ref(false)
+  const tipos = [
+    { title: 'Todos los movimientos', value: 'todos' },
+    { title: 'Solo ingresos', value: 'ingreso' },
+    { title: 'Solo gastos', value: 'gasto' },
+  ]
 
-const tipos = [
-  { title: 'Todos los movimientos', value: 'todos' },
-  { title: 'Solo ingresos', value: 'income' },
-  { title: 'Solo gastos', value: 'expense' },
-]
+  const categorias = computed(() => [
+    'Todas',
+    ...new Set(
+      (finanzas?.movimientos || [])
+        .map(m => m.category?.name)
+        .filter(Boolean),
+    ),
+  ])
 
-const categorias = computed(() => [
-  'Todas',
-  ...new Set(
-    (finanzas?.movimientos || [])
-      .map(m => m.category)
-      .filter(Boolean)
-  ),
-])
+  const movimientosFiltrados = computed(() => {
+    return (finanzas?.movimientos || [])
+      .filter(m => {
+        const texto = `${m.description} ${m.category?.name}`.toLowerCase()
 
-const movimientosFiltrados = computed(() => {
-  return (finanzas?.movimientos || [])
-    .filter(m => {
-      const texto = `${m.name} ${m.category}`.toLowerCase()
+        const coincideBusqueda = texto.includes(
+          busqueda.value.toLowerCase(),
+        )
 
-      const coincideBusqueda = texto.includes(
-        busqueda.value.toLowerCase()
-      )
+        const coincideTipo
+          = filtroTipo.value === 'todos'
+            || m.type === filtroTipo.value
 
-      const coincideTipo =
-        filtroTipo.value === 'todos' ||
-        m.type === filtroTipo.value
+        const coincideCategoria
+          = filtroCategoria.value === 'Todas'
+            || m.category?.name === filtroCategoria.value
 
-      const coincideCategoria =
-        filtroCategoria.value === 'Todas' ||
-        m.category === filtroCategoria.value
+        return coincideBusqueda
+          && coincideTipo
+          && coincideCategoria
+      })
+      .toSorted((a, b) => b.date.localeCompare(a.date))
+  })
 
-      return coincideBusqueda &&
-        coincideTipo &&
-        coincideCategoria
-    })
-    .sort((a, b) => b.date.localeCompare(a.date))
-})
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
+  }
 
-const dinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
+  function confirmarEliminar (movimiento) {
+    movimientoSeleccionado.value = movimiento
+    dialogEliminar.value = true
+  }
 
-function confirmarEliminar(movimiento) {
-  movimientoSeleccionado.value = movimiento
-  dialogEliminar.value = true
-}
+  function eliminar () {
+    if (!movimientoSeleccionado.value) return
 
-function eliminar() {
-  if (!movimientoSeleccionado.value) return
+    finanzas?.eliminarMovimiento(
+      movimientoSeleccionado.value.id,
+    )
 
-  finanzas?.eliminarMovimiento(
-    movimientoSeleccionado.value.id
-  )
-
-  dialogEliminar.value = false
-  movimientoSeleccionado.value = null
-  snackbar.value = true
-}
+    dialogEliminar.value = false
+    movimientoSeleccionado.value = null
+    snackbar.value = true
+  }
 </script>
 
 <template>
-  <v-container fluid class="movements-page pa-4 pa-md-8">
+  <v-container class="movements-page pa-4 pa-md-8" fluid>
     <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
+          class="mb-3"
+          color="primary"
           prepend-icon="mdi-arrow-left"
           variant="text"
-          color="primary"
-          class="mb-3"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
         </v-btn>
 
         <h1>Mis movimientos</h1>
+
         <p>
           Consulta y administra todas tus transacciones financieras.
         </p>
@@ -100,8 +101,8 @@ function eliminar() {
 
       <v-btn
         color="primary"
-        rounded="lg"
         prepend-icon="mdi-view-dashboard-outline"
+        rounded="lg"
         @click="router.push('/dashboard')"
       >
         Dashboard
@@ -110,7 +111,7 @@ function eliminar() {
 
     <!-- RESUMEN -->
     <v-row class="mt-5">
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="stat-card balance-card" elevation="0">
           <div class="stat-heading">
             <span>Saldo disponible</span>
@@ -122,7 +123,7 @@ function eliminar() {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-heading">
             <span>Total ingresos</span>
@@ -137,7 +138,7 @@ function eliminar() {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="12" md="4" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-heading">
             <span>Total gastos</span>
@@ -158,6 +159,7 @@ function eliminar() {
       <div class="history-header">
         <div>
           <h3>Historial de transacciones</h3>
+
           <p>
             {{ movimientosFiltrados.length }}
             movimientos encontrados
@@ -174,36 +176,36 @@ function eliminar() {
       <div class="filters">
         <v-text-field
           v-model="busqueda"
-          placeholder="Buscar por concepto o categoría..."
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          density="comfortable"
-          rounded="lg"
-          hide-details
           class="search-field"
           clearable
+          density="comfortable"
+          hide-details
+          placeholder="Buscar por concepto o categoría..."
+          prepend-inner-icon="mdi-magnify"
+          rounded="lg"
+          variant="outlined"
         />
 
         <v-select
           v-model="filtroTipo"
-          :items="tipos"
+          class="filter-field"
+          density="comfortable"
+          hide-details
           item-title="title"
           item-value="value"
-          variant="outlined"
-          density="comfortable"
+          :items="tipos"
           rounded="lg"
-          hide-details
-          class="filter-field"
+          variant="outlined"
         />
 
         <v-select
           v-model="filtroCategoria"
-          :items="categorias"
-          variant="outlined"
-          density="comfortable"
-          rounded="lg"
-          hide-details
           class="filter-field"
+          density="comfortable"
+          hide-details
+          :items="categorias"
+          rounded="lg"
+          variant="outlined"
         />
       </div>
 
@@ -229,57 +231,57 @@ function eliminar() {
               <div class="movement-name">
                 <v-avatar
                   :color="
-                    movimiento.type === 'income'
+                    movimiento.type === 'ingreso'
                       ? 'success'
                       : 'error'
                   "
-                  variant="tonal"
                   size="42"
+                  variant="tonal"
                 >
                   <v-icon>
                     {{
-                      movimiento.type === 'income'
+                      movimiento.type === 'ingreso'
                         ? 'mdi-arrow-down-left'
                         : 'mdi-arrow-up-right'
                     }}
                   </v-icon>
                 </v-avatar>
 
-                <strong>{{ movimiento.name }}</strong>
+                <strong>{{ movimiento.description }}</strong>
               </div>
             </td>
 
             <td>
               <v-chip
                 :color="
-                  movimiento.type === 'income'
+                  movimiento.type === 'ingreso'
                     ? 'success'
                     : 'error'
                 "
-                variant="tonal"
                 size="small"
+                variant="tonal"
               >
                 {{
-                  movimiento.type === 'income'
+                  movimiento.type === 'ingreso'
                     ? 'Ingreso'
                     : 'Gasto'
                 }}
               </v-chip>
             </td>
 
-            <td>{{ movimiento.category }}</td>
+            <td>{{ movimiento.category?.name }}</td>
 
             <td>{{ movimiento.date }}</td>
 
             <td
               class="text-right font-weight-bold"
               :class="
-                movimiento.type === 'income'
+                movimiento.type === 'ingreso'
                   ? 'text-success'
                   : 'text-error'
               "
             >
-              {{ movimiento.type === 'income' ? '+' : '-' }}
+              {{ movimiento.type === 'ingreso' ? '+' : '-' }}
               {{ dinero(movimiento.amount) }}
             </td>
 
@@ -288,10 +290,10 @@ function eliminar() {
                 <template #activator="{ props }">
                   <v-btn
                     v-bind="props"
-                    icon="mdi-delete-outline"
                     color="error"
-                    variant="text"
+                    icon="mdi-delete-outline"
                     size="small"
+                    variant="text"
                     @click="confirmarEliminar(movimiento)"
                   />
                 </template>
@@ -302,19 +304,20 @@ function eliminar() {
           <tr v-if="movimientosFiltrados.length === 0">
             <td colspan="6">
               <div class="empty-state">
-                <v-icon size="60" color="grey-lighten-1">
+                <v-icon color="grey-lighten-1" size="60">
                   mdi-text-box-search-outline
                 </v-icon>
 
                 <h3>No se encontraron movimientos</h3>
+
                 <p>
                   Prueba con otros filtros o registra una transacción.
                 </p>
 
                 <v-btn
                   color="primary"
-                  variant="tonal"
                   rounded="lg"
+                  variant="tonal"
                   @click="router.push('/ingresos')"
                 >
                   Registrar ingreso
@@ -328,9 +331,9 @@ function eliminar() {
 
     <!-- CONFIRMACIÓN -->
     <v-dialog v-model="dialogEliminar" max-width="420">
-      <v-card rounded="xl" class="delete-dialog">
+      <v-card class="delete-dialog" rounded="xl">
         <div class="delete-icon">
-          <v-icon size="32" color="error">
+          <v-icon color="error" size="32">
             mdi-delete-alert-outline
           </v-icon>
         </div>
@@ -339,14 +342,14 @@ function eliminar() {
 
         <p>
           Estás a punto de eliminar
-          <strong>{{ movimientoSeleccionado?.name }}</strong>.
+          <strong>{{ movimientoSeleccionado?.description }}</strong>.
           Esta acción no se puede deshacer.
         </p>
 
         <div class="delete-actions">
           <v-btn
-            variant="outlined"
             rounded="lg"
+            variant="outlined"
             @click="dialogEliminar = false"
           >
             Cancelar
@@ -354,8 +357,8 @@ function eliminar() {
 
           <v-btn
             color="error"
-            rounded="lg"
             prepend-icon="mdi-delete-outline"
+            rounded="lg"
             @click="eliminar"
           >
             Sí, eliminar

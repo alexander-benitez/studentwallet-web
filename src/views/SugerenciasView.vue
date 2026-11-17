@@ -1,128 +1,130 @@
+<script setup lang="ts">
+  import { onMounted, ref } from 'vue'
 
-<script setup>
-import { ref, onMounted } from 'vue'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
+  const categoria = ref('Mejora')
+  const comentario = ref('')
+  const calificacion = ref(0)
+  const loading = ref(false)
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const formulario = ref(null)
 
-const categoria = ref('Mejora')
-const comentario = ref('')
-const calificacion = ref(0)
-const loading = ref(false)
-const snackbar = ref(false)
-const mensaje = ref('')
-const formulario = ref(null)
+  const categorias = [
+    'Mejora',
+    'Reportar error',
+    'Nueva función',
+    'Opinión general',
+  ]
 
-const categorias = [
-  'Mejora',
-  'Reportar error',
-  'Nueva función',
-  'Opinión general',
-]
-
-const required = (v) =>
-  !!String(v ?? '').trim() || 'Este campo es obligatorio'
-
-const minCaracteres = (v) =>
-  String(v ?? '').trim().length >= 10 ||
-  'Escribe al menos 10 caracteres'
-
-const misComentarios = ref([])
-
-const estados = {
-  pendiente: 'Pendiente',
-  leida: 'En revisión',
-  resuelta: 'Resuelto',
-}
-
-async function cargarComentarios() {
-  try {
-    const respuesta = await fetch(`${API_BASE}/suggestions`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    })
-
-    if (!respuesta.ok) return
-
-    const datos = await respuesta.json()
-
-    misComentarios.value = (datos.data || []).map((item) => ({
-      id: item.id,
-      categoria: item.title,
-      comentario: item.message,
-      estado: estados[item.status] || 'Pendiente',
-      fecha: new Date(item.created_at).toLocaleDateString(),
-    }))
-  } catch {
-    mensaje.value = 'No se pudieron cargar tus comentarios.'
-    snackbar.value = true
-  }
-}
-
-async function enviarComentario() {
-  if (loading.value) return
-
-  const resultado = await formulario.value.validate()
-
-  if (!resultado.valid) return
-
-  if (calificacion.value === 0) {
-    mensaje.value = 'Selecciona una calificación.'
-    snackbar.value = true
-    return
+  function required (v) {
+    return !!String(v ?? '').trim() || 'Este campo es obligatorio'
   }
 
-  loading.value = true
+  function minCaracteres (v) {
+    return String(v ?? '').trim().length >= 10
+      || 'Escribe al menos 10 caracteres'
+  }
 
-  try {
-    const respuesta = await fetch(`${API_BASE}/suggestions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-      body: JSON.stringify({
-        title: categoria.value,
-        message: `[Calificación: ${calificacion.value}/5] ${comentario.value.trim()}`,
-      }),
-    })
+  const misComentarios = ref([])
 
-    if (respuesta.ok) {
-      comentario.value = ''
-      categoria.value = 'Mejora'
-      calificacion.value = 0
-      formulario.value.resetValidation()
+  const estados = {
+    pendiente: 'Pendiente',
+    leida: 'En revisión',
+    resuelta: 'Resuelto',
+  }
 
-      mensaje.value = '¡Tu comentario fue enviado correctamente!'
-      snackbar.value = true
+  async function cargarComentarios () {
+    try {
+      const respuesta = await fetch(`${API_BASE}/suggestions`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      })
 
-      await cargarComentarios()
-    } else {
-      mensaje.value = 'Hubo un error al enviar tu comentario.'
+      if (!respuesta.ok) return
+
+      const datos = await respuesta.json()
+
+      misComentarios.value = (datos.data || []).map(item => ({
+        id: item.id,
+        categoria: item.title,
+        comentario: item.message,
+        estado: estados[item.status] || 'Pendiente',
+        fecha: new Date(item.created_at).toLocaleDateString(),
+      }))
+    } catch {
+      mensaje.value = 'No se pudieron cargar tus comentarios.'
       snackbar.value = true
     }
-  } catch {
-    mensaje.value = 'Hubo un error al enviar tu comentario.'
-    snackbar.value = true
-  } finally {
-    loading.value = false
   }
-}
 
-onMounted(() => {
-  cargarComentarios()
-})
+  async function enviarComentario () {
+    if (loading.value) return
+
+    const resultado = await formulario.value.validate()
+
+    if (!resultado.valid) return
+
+    if (calificacion.value === 0) {
+      mensaje.value = 'Selecciona una calificación.'
+      snackbar.value = true
+      return
+    }
+
+    loading.value = true
+
+    try {
+      const respuesta = await fetch(`${API_BASE}/suggestions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          title: categoria.value,
+          message: `[Calificación: ${calificacion.value}/5] ${comentario.value.trim()}`,
+        }),
+      })
+
+      if (respuesta.ok) {
+        comentario.value = ''
+        categoria.value = 'Mejora'
+        calificacion.value = 0
+        formulario.value.resetValidation()
+
+        mensaje.value = '¡Tu comentario fue enviado correctamente!'
+        snackbar.value = true
+
+        await cargarComentarios()
+      } else {
+        mensaje.value = 'Hubo un error al enviar tu comentario.'
+        snackbar.value = true
+      }
+    } catch {
+      mensaje.value = 'Hubo un error al enviar tu comentario.'
+      snackbar.value = true
+    } finally {
+      loading.value = false
+    }
+  }
+
+  onMounted(() => {
+    cargarComentarios()
+  })
 </script>
 
 <template>
   <div class="sugerencias-page">
     <div class="page-header">
-      <v-chip color="primary" variant="tonal" class="mb-3">
+      <v-chip class="mb-3" color="primary" variant="tonal">
         Tu opinión importa
       </v-chip>
 
       <h1>Sugerencias y mejoras</h1>
+
       <p>
         Ayúdanos a construir una mejor experiencia
         en StudentWallet.
@@ -150,26 +152,26 @@ onMounted(() => {
 
             <v-select
               v-model="categoria"
-              :items="categorias"
-              variant="outlined"
-              rounded="lg"
               class="mt-2 mb-3"
               :disabled="loading"
+              :items="categorias"
+              rounded="lg"
+              variant="outlined"
             />
 
             <label>Tu comentario</label>
 
             <v-textarea
               v-model="comentario"
+              class="mt-2 mb-3"
+              counter="500"
+              :disabled="loading"
+              maxlength="500"
               placeholder="Cuéntanos qué podemos mejorar..."
-              variant="outlined"
               rounded="lg"
               rows="5"
-              counter="500"
-              maxlength="500"
               :rules="[required, minCaracteres]"
-              :disabled="loading"
-              class="mt-2 mb-3"
+              variant="outlined"
             />
 
             <label>Califica tu experiencia</label>
@@ -177,25 +179,26 @@ onMounted(() => {
             <div class="rating-container">
               <v-rating
                 v-model="calificacion"
-                color="amber"
                 active-color="amber"
+                color="amber"
+                :disabled="loading"
                 hover
                 size="large"
-                :disabled="loading"
               />
+
               <span>{{ calificacion }} / 5</span>
             </div>
 
             <v-btn
-              type="submit"
-              color="primary"
-              size="large"
-              rounded="lg"
               block
-              :loading="loading"
-              :disabled="loading"
-              prepend-icon="mdi-send-outline"
               class="send-btn"
+              color="primary"
+              :disabled="loading"
+              :loading="loading"
+              prepend-icon="mdi-send-outline"
+              rounded="lg"
+              size="large"
+              type="submit"
             >
               Enviar comentario
             </v-btn>
@@ -211,6 +214,7 @@ onMounted(() => {
             <v-icon color="primary">
               mdi-lightbulb-outline
             </v-icon>
+
             <div>
               <strong>Propón nuevas ideas</strong>
               <p>Ayúdanos a crear funciones útiles.</p>
@@ -221,6 +225,7 @@ onMounted(() => {
             <v-icon color="warning">
               mdi-bug-outline
             </v-icon>
+
             <div>
               <strong>Reporta problemas</strong>
               <p>Cuéntanos si algo no funciona bien.</p>
@@ -231,6 +236,7 @@ onMounted(() => {
             <v-icon color="success">
               mdi-check-decagram-outline
             </v-icon>
+
             <div>
               <strong>Mejora StudentWallet</strong>
               <p>Tus sugerencias nos ayudan a crecer.</p>
@@ -240,15 +246,16 @@ onMounted(() => {
 
         <v-card class="content-card mt-4" elevation="0">
           <h2>Mis comentarios</h2>
+
           <p class="section-subtitle">
             Consulta el estado de tus sugerencias.
           </p>
 
           <v-alert
             v-if="misComentarios.length === 0"
+            class="mt-4"
             type="info"
             variant="tonal"
-            class="mt-4"
           >
             Todavía no has enviado comentarios.
           </v-alert>
@@ -262,7 +269,6 @@ onMounted(() => {
               <strong>{{ item.categoria }}</strong>
 
               <v-chip
-                size="x-small"
                 :color="
                   item.estado === 'Resuelto'
                     ? 'success'
@@ -270,6 +276,7 @@ onMounted(() => {
                       ? 'info'
                       : 'warning'
                 "
+                size="x-small"
                 variant="tonal"
               >
                 {{ item.estado }}

@@ -1,201 +1,270 @@
+<script setup lang="ts">
+  import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip,
+  } from 'chart.js'
+  import { computed, onMounted, ref } from 'vue'
+  import { Bar, Doughnut } from 'vue-chartjs'
+  import { useTheme } from 'vuetify'
 
-<script setup>
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
-import { Bar, Doughnut } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-} from 'chart.js'
-
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement
-)
-
-const theme = useTheme()
-
-// Datos en integración con API.
-// No representan finanzas reales de los estudiantes.
-const resumenMensual = ref([
-  { mes: 'Ene', ingresos: 3200, gastos: 2100 },
-  { mes: 'Feb', ingresos: 3900, gastos: 2500 },
-  { mes: 'Mar', ingresos: 3500, gastos: 2800 },
-  { mes: 'Abr', ingresos: 4600, gastos: 3100 },
-  { mes: 'May', ingresos: 4200, gastos: 2900 },
-  { mes: 'Jun', ingresos: 5100, gastos: 3400 },
-  { mes: 'Jul', ingresos: 4800, gastos: 3600 },
-  { mes: 'Ago', ingresos: 5600, gastos: 3800 },
-  { mes: 'Sep', ingresos: 5900, gastos: 4100 },
-  { mes: 'Oct', ingresos: 6200, gastos: 4300 },
-])
-
-const categorias = ref([
-  { nombre: 'Alimentación', monto: 12500, color: '#2563EB' },
-  { nombre: 'Transporte', monto: 8200, color: '#7C3AED' },
-  { nombre: 'Educación', monto: 6700, color: '#10B981' },
-  { nombre: 'Entretenimiento', monto: 4200, color: '#F59E0B' },
-  { nombre: 'Otros', monto: 3100, color: '#EF4444' },
-])
-
-const totalIngresos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.ingresos,
-    0
+  ChartJS.register(
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    ArcElement,
   )
-)
 
-const totalGastos = computed(() =>
-  resumenMensual.value.reduce(
-    (total, item) => total + item.gastos,
-    0
+  const theme = useTheme()
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+  const reporte = ref({
+    totals: { total_incomes: 0, total_expenses: 0, balance: 0 },
+    monthly: [],
+    categories: [],
+  })
+  const usuarios = ref([])
+  const cargando = ref(false)
+
+  const nombresMeses = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  ]
+
+  const coloresCategorias = [
+    '#2563EB', '#7C3AED', '#10B981', '#F59E0B', '#EF4444',
+    '#EC4899', '#06B6D4', '#64748B',
+  ]
+
+  function extraerLista (datos) {
+    if (Array.isArray(datos?.data)) return datos.data
+    if (Array.isArray(datos)) return datos
+    return []
+  }
+
+  function formatearMes (ym) {
+    const partes = String(ym || '').split('-')
+    if (partes.length < 2) return ym || ''
+    const idx = Number(partes[1]) - 1
+    const nombre = nombresMeses[idx] || partes[1]
+    return `${nombre} ${partes[0]}`
+  }
+
+  const resumenMensual = computed(() =>
+    (reporte.value.monthly || [])
+      .slice()
+      .sort((a, b) => String(a.month).localeCompare(String(b.month)))
+      .map(item => ({
+        mes: formatearMes(item.month),
+        ingresos: Number(item.ingresos) || 0,
+        gastos: Number(item.gastos) || 0,
+      }))
+      .filter(mes => mes.ingresos > 0 || mes.gastos > 0),
   )
-)
 
-const balance = computed(() =>
-  totalIngresos.value - totalGastos.value
-)
+  const categorias = computed(() =>
+    (reporte.value.categories || []).map((cat, indice) => ({
+      nombre: cat.name || 'Sin categoría',
+      monto: Number(cat.amount) || 0,
+      color: cat.color || coloresCategorias[indice % coloresCategorias.length],
+    })),
+  )
 
-const porcentajeAhorro = computed(() =>
-  totalIngresos.value > 0
-    ? (balance.value / totalIngresos.value) * 100
-    : 0
-)
+  const totalIngresos = computed(() => Number(reporte.value.totals?.total_incomes) || 0)
 
-const graficoBarras = computed(() => ({
-  labels: resumenMensual.value.map(item => item.mes),
-  datasets: [
-    {
-      label: 'Ingresos',
-      data: resumenMensual.value.map(item => item.ingresos),
-      backgroundColor: '#2563EB',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-    {
-      label: 'Gastos',
-      data: resumenMensual.value.map(item => item.gastos),
-      backgroundColor: '#7C3AED',
-      borderRadius: 7,
-      maxBarThickness: 24,
-    },
-  ],
-}))
+  const totalGastos = computed(() => Number(reporte.value.totals?.total_expenses) || 0)
 
-const graficoCategorias = computed(() => ({
-  labels: categorias.value.map(item => item.nombre),
-  datasets: [
-    {
-      data: categorias.value.map(item => item.monto),
-      backgroundColor: categorias.value.map(item => item.color),
-      borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
-      borderWidth: 2,
-      hoverOffset: 8,
-    },
-  ],
-}))
+  const balance = computed(() => Number(reporte.value.totals?.balance) || (totalIngresos.value - totalGastos.value))
 
-// Opciones del gráfico de barras adaptadas al tema.
-const opcionesBarras = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
-  const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
+  const porcentajeAhorro = computed(() =>
+    totalIngresos.value > 0
+      ? (balance.value / totalIngresos.value) * 100
+      : 0,
+  )
 
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 20,
+  const totalUsuarios = computed(() => usuarios.value.length)
+
+  const graficoBarras = computed(() => ({
+    labels: resumenMensual.value.map(item => item.mes),
+    datasets: [
+      {
+        label: 'Ingresos',
+        data: resumenMensual.value.map(item => item.ingresos),
+        backgroundColor: '#2563EB',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+      {
+        label: 'Gastos',
+        data: resumenMensual.value.map(item => item.gastos),
+        backgroundColor: '#7C3AED',
+        borderRadius: 7,
+        maxBarThickness: 24,
+      },
+    ],
+  }))
+
+  const graficoCategorias = computed(() => ({
+    labels: categorias.value.map(item => item.nombre),
+    datasets: [
+      {
+        data: categorias.value.map(item => Number(item.monto)),
+        backgroundColor: categorias.value.map(item => item.color),
+        borderColor: theme.current.value.dark ? '#111C2E' : '#FFFFFF',
+        borderWidth: 2,
+        hoverOffset: 8,
+      },
+    ],
+  }))
+
+  // Opciones del gráfico de barras adaptadas al tema.
+  const opcionesBarras = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+    const colorCuadricula = esOscuro ? '#263449' : '#E2E8F0'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 20,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+          borderColor: colorCuadricula,
+          borderWidth: 1,
         },
       },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-        borderColor: colorCuadricula,
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: colorTexto,
-          callback: value => '$' + value.toLocaleString(),
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: colorTexto,
+            callback: value => '$' + value.toLocaleString(),
+          },
+          grid: {
+            color: colorCuadricula,
+          },
         },
-        grid: {
-          color: colorCuadricula,
-        },
-      },
-      x: {
-        ticks: {
-          color: colorTexto,
-        },
-        grid: {
-          display: false,
+        x: {
+          ticks: {
+            color: colorTexto,
+          },
+          grid: {
+            display: false,
+          },
         },
       },
-    },
+    }
+  })
+
+  // Opciones del gráfico circular adaptadas al tema.
+  const opcionesCategorias = computed(() => {
+    const esOscuro = theme.current.value.dark
+    const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            usePointStyle: true,
+            padding: 15,
+          },
+        },
+        tooltip: {
+          backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
+          titleColor: esOscuro ? '#F1F5F9' : '#111827',
+          bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
+        },
+      },
+    }
+  })
+
+  async function cargarFinanzas () {
+    cargando.value = true
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      const headers = {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      }
+
+      const [respuestaReporte, respuestaUsuarios] = await Promise.all([
+        fetch(`${API_BASE}/admin/reports`, { headers }),
+        fetch(`${API_BASE}/admin/users`, { headers }),
+      ])
+
+      if (respuestaReporte.ok) {
+        const datos = await respuestaReporte.json()
+        const payload = datos?.data || datos || {}
+        reporte.value = {
+          totals: {
+            total_incomes: Number(payload.totals?.total_incomes) || 0,
+            total_expenses: Number(payload.totals?.total_expenses) || 0,
+            balance: Number(payload.totals?.balance) || 0,
+          },
+          monthly: Array.isArray(payload.monthly) ? payload.monthly : [],
+          categories: Array.isArray(payload.categories) ? payload.categories : [],
+        }
+      }
+
+      if (respuestaUsuarios.ok) {
+        const datos = await respuestaUsuarios.json()
+        usuarios.value = extraerLista(datos)
+      }
+    } catch (error) {
+      console.error('Error al cargar las finanzas:', error)
+    } finally {
+      cargando.value = false
+    }
   }
-})
 
-// Opciones del gráfico circular adaptadas al tema.
-const opcionesCategorias = computed(() => {
-  const esOscuro = theme.current.value.dark
-  const colorTexto = esOscuro ? '#CBD5E1' : '#64748B'
+  onMounted(() => {
+    cargarFinanzas()
+  })
 
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '72%',
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          usePointStyle: true,
-          padding: 15,
-        },
-      },
-      tooltip: {
-        backgroundColor: esOscuro ? '#263449' : '#FFFFFF',
-        titleColor: esOscuro ? '#F1F5F9' : '#111827',
-        bodyColor: esOscuro ? '#CBD5E1' : '#64748B',
-      },
-    },
+  defineExpose({
+    cargarFinanzas,
+    totalUsuarios,
+    usuarios,
+  })
+
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
   }
-})
-
-function dinero(valor) {
-  return new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-}
 </script>
-
 
 <template>
   <div class="finanzas-admin">
     <div class="page-header">
       <div>
-        <v-chip color="primary" variant="tonal" class="mb-3">
+        <v-chip class="mb-3" color="primary" variant="tonal">
           Administración
         </v-chip>
 
@@ -207,14 +276,11 @@ function dinero(valor) {
         </p>
       </div>
 
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <!-- INDICADORES -->
     <v-row class="mt-5">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon blue">
             <v-icon color="primary" size="26">
@@ -229,7 +295,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon purple">
             <v-icon color="#7C3AED" size="26">
@@ -244,7 +310,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon green">
             <v-icon color="success" size="26">
@@ -259,7 +325,7 @@ function dinero(valor) {
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" lg="3" sm="6">
         <v-card class="stat-card" elevation="0">
           <div class="stat-icon orange">
             <v-icon color="warning" size="26">
@@ -327,7 +393,7 @@ function dinero(valor) {
       <div class="section-heading">
         <div>
           <h2>Resumen financiero mensual</h2>
-          <p>Indicadores en integración con API</p>
+          <p>Consolidado agregado de ingresos y gastos de la plataforma</p>
         </div>
 
         <v-icon color="primary">
@@ -372,16 +438,6 @@ function dinero(valor) {
       </v-table>
     </v-card>
 
-    <v-alert
-      class="mt-5"
-      type="info"
-      variant="tonal"
-      rounded="lg"
-    >
-      Este panel utiliza información ficticia para demostrar
-      cómo funcionaría la supervisión financiera.
-      No muestra datos privados de estudiantes.
-    </v-alert>
   </div>
 </template>
 

@@ -1,41 +1,64 @@
+<script setup lang="ts">
+  import { useRoute, useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { useRoute } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-const route = useRoute()
-const finanzas = useFinanzasStore()
+  const route = useRoute()
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-defineProps({
-  modelValue: {
-    type: Boolean,
-    default: true,
-  },
-})
+  async function logout () {
+    const token = localStorage.getItem('auth_token')
 
-const emit = defineEmits(['update:modelValue'])
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión en el servidor:', error)
+    } finally {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_info')
+      router.push('/')
+    }
+  }
 
-const menu = [
-  { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
-  { title: 'Ingresos', icon: 'mdi-trending-up', to: '/ingresos' },
-  { title: 'Gastos', icon: 'mdi-trending-down', to: '/gastos' },
-  { title: 'Movimientos', icon: 'mdi-swap-horizontal', to: '/movimientos' },
-  {title: 'Mis categorías',icon: 'mdi-shape-outline',to: '/categorias',},
-  { title: 'Presupuestos', icon: 'mdi-chart-donut', to: '/presupuestos' },
-  { title: 'Metas de ahorro', icon: 'mdi-piggy-bank-outline', to: '/metas' },
-  { title: 'Estadísticas', icon: 'mdi-chart-bar', to: '/estadisticas' },
-  {title: 'Sugerencias y mejoras',icon: 'mdi-message-text-outline',to: '/sugerencias',},
-  { title: 'Mi perfil', icon: 'mdi-account-circle-outline', to: '/perfil' },
-  { title: 'Configuración', icon: 'mdi-cog-outline', to: '/configuracion' },
-]
+  defineProps({
+    modelValue: {
+      type: Boolean,
+      default: true,
+    },
+  })
+
+  const emit = defineEmits(['update:model-value'])
+
+  const menu = [
+    { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
+    { title: 'Ingresos', icon: 'mdi-trending-up', to: '/ingresos' },
+    { title: 'Gastos', icon: 'mdi-trending-down', to: '/gastos' },
+    { title: 'Movimientos', icon: 'mdi-swap-horizontal', to: '/movimientos' },
+    { title: 'Mis categorías', icon: 'mdi-shape-outline', to: '/categorias' },
+    { title: 'Presupuestos', icon: 'mdi-chart-donut', to: '/presupuestos' },
+    { title: 'Metas de ahorro', icon: 'mdi-piggy-bank-outline', to: '/metas' },
+    { title: 'Estadísticas', icon: 'mdi-chart-bar', to: '/estadisticas' },
+    { title: 'Sugerencias y mejoras', icon: 'mdi-message-text-outline', to: '/sugerencias' },
+    { title: 'Mi perfil', icon: 'mdi-account-circle-outline', to: '/perfil' },
+    { title: 'Configuración', icon: 'mdi-cog-outline', to: '/configuracion' },
+  ]
 </script>
 
 <template>
   <v-navigation-drawer
+    color="#14213D"
     :model-value="modelValue"
     width="270"
-    color="#14213D"
-    @update:model-value="emit('update:modelValue', $event)"
+    @update:model-value="emit('update:model-value', $event)"
   >
     <div class="sidebar-content">
       <div class="brand">
@@ -55,24 +78,24 @@ const menu = [
 
       <div class="menu-label">MENÚ PRINCIPAL</div>
 
-      <v-list nav density="comfortable" class="menu-list">
+      <v-list class="menu-list" density="comfortable" nav>
         <v-list-item
           v-for="item in menu"
           :key="item.to"
-          :to="item.to"
-          :prepend-icon="item.icon"
-          :title="item.title"
           :active="route.path === item.to"
           active-class="sidebar-active"
-          rounded="lg"
           class="menu-item"
+          :prepend-icon="item.icon"
+          rounded="lg"
+          :title="item.title"
+          :to="item.to"
         />
       </v-list>
 
       <v-spacer />
 
       <div class="sidebar-footer">
-        <v-divider color="white" opacity="0.15" class="mb-4" />
+        <v-divider class="mb-4" color="white" opacity="0.15" />
 
         <div class="user-info">
           <v-avatar color="#2563EB" size="42">
@@ -87,11 +110,11 @@ const menu = [
 
         <v-btn
           block
-          variant="text"
+          class="mt-4"
           color="white"
           prepend-icon="mdi-logout"
-          class="mt-4"
-          to="/"
+          variant="text"
+          @click="logout"
         >
           Cerrar sesión
         </v-btn>

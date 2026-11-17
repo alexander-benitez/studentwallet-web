@@ -1,106 +1,128 @@
+<script setup lang="ts">
+  import { computed, onMounted, ref } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const route = useRoute()
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
-
-const categoriasIngresos = computed(() =>
-  (finanzas?.categorias || [])
-    .filter(categoria => categoria.tipo === 'income')
-    .map(categoria => ({
-      title: categoria.nombre,
-      value: categoria.nombre,
-    }))
-)
-
-const form = ref(null)
-const concepto = ref('')
-const monto = ref(null)
-const categoria = ref(null)
-const fecha = ref(new Date().toLocaleDateString('en-CA'))
-const descripcion = ref('')
-
-const dialog = ref(false)
-const snackbar = ref(false)
-const mensaje = ref('')
-const guardando = ref(false)
-const busqueda = ref('')
-
-const ingresos = computed(() =>
-  (finanzas?.movimientos || [])
-    .filter(m => m.type === 'income')
-    .filter(m =>
-      `${m.name} ${m.category}`
-        .toLowerCase()
-        .includes(busqueda.value.toLowerCase())
-    )
-)
-
-const totalIngresos = computed(() => finanzas?.ingresos)
-
-const formatoDinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-
-const obligatorio = v =>
-  !!String(v ?? '').trim() || 'Este campo es obligatorio'
-
-const montoValido = v =>
-  (Number.isFinite(Number(v)) && Number(v) > 0) ||
-  'Ingresa un monto mayor a cero'
-
-function limpiarFormulario() {
-  concepto.value = ''
-  monto.value = null
-  categoria.value = null
-  fecha.value = new Date().toLocaleDateString('en-CA')
-  descripcion.value = ''
-  form.value?.resetValidation()
-}
-
-async function guardarIngreso() {
-  const resultado = await form.value.validate()
-
-  if (!resultado.valid) return
-
-  guardando.value = true
-
-  finanzas?.agregarMovimiento({
-    name: concepto.value.trim(),
-    category: categoria.value,
-    amount: Number(monto.value),
-    type: 'income',
-    date: fecha.value,
-    description: descripcion.value,
-    icon: 'mdi-cash-plus',
-    color: 'success',
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarCategorias(),
+      finanzas?.cargarMovimientos(),
+      finanzas?.cargarBalance(),
+    ])
+    if (route.query.nuevo === '1') {
+      dialog.value = true
+    }
   })
 
-  guardando.value = false
-  dialog.value = false
-  limpiarFormulario()
+  const tipoMovimiento = ref('ingreso')
 
-  mensaje.value = 'Ingreso registrado correctamente'
-  snackbar.value = true
-}
+  const categoriasMovimiento = computed(() =>
+    (finanzas?.categorias || [])
+      .filter(categoria => (categoria.type ?? categoria.tipo) === tipoMovimiento.value)
+      .map(categoria => ({
+        title: categoria.name ?? categoria.nombre,
+        value: categoria.id,
+      })),
+  )
+
+  const form = ref(null)
+  const concepto = ref('')
+  const monto = ref(null)
+  const categoria = ref(null)
+  const fecha = ref(new Date().toLocaleDateString('en-CA'))
+  const descripcion = ref('')
+
+  const dialog = ref(false)
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const guardando = ref(false)
+  const busqueda = ref('')
+
+  const ingresos = computed(() =>
+    (finanzas?.movimientos || [])
+      .filter(m => m.type === 'ingreso')
+      .filter(m =>
+        `${m.description} ${m.category?.name}`
+          .toLowerCase()
+          .includes(busqueda.value.toLowerCase()),
+      ),
+  )
+
+  const totalIngresos = computed(() => finanzas?.ingresos)
+
+  function formatoDinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
+  }
+
+  function obligatorio (v) {
+    return !!String(v ?? '').trim() || 'Este campo es obligatorio'
+  }
+
+  function montoValido (v) {
+    return (Number.isFinite(Number(v)) && Number(v) > 0)
+      || 'Ingresa un monto mayor a cero'
+  }
+
+  function limpiarFormulario () {
+    concepto.value = ''
+    monto.value = null
+    categoria.value = null
+    fecha.value = new Date().toLocaleDateString('en-CA')
+    descripcion.value = ''
+    form.value?.resetValidation()
+  }
+
+  async function guardarMovimiento () {
+    const resultado = await form.value.validate()
+
+    if (!resultado.valid) return
+
+    guardando.value = true
+
+    const res = await finanzas?.agregarMovimiento({
+      amount: Number(monto.value),
+      type: tipoMovimiento.value,
+      category_id: categoria.value,
+      description: concepto.value.trim(),
+      date: fecha.value,
+    })
+
+    guardando.value = false
+
+    if (!res?.ok) {
+      mensaje.value = res?.message || 'No se pudo guardar el movimiento.'
+      snackbar.value = true
+      return
+    }
+
+    dialog.value = false
+    limpiarFormulario()
+
+    mensaje.value = tipoMovimiento.value === 'ingreso'
+      ? 'Ingreso registrado correctamente'
+      : 'Gasto registrado correctamente'
+    snackbar.value = true
+  }
 </script>
 
 <template>
-  <v-container fluid class="income-page pa-4 pa-md-8">
+  <v-container class="income-page pa-4 pa-md-8" fluid>
 
     <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
-          variant="text"
-          prepend-icon="mdi-arrow-left"
-          color="primary"
           class="mb-3"
+          color="primary"
+          prepend-icon="mdi-arrow-left"
+          variant="text"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
@@ -113,8 +135,8 @@ async function guardarIngreso() {
       <v-btn
         color="primary"
         prepend-icon="mdi-plus"
-        size="large"
         rounded="lg"
+        size="large"
         @click="dialog = true"
       >
         Nuevo ingreso
@@ -169,13 +191,13 @@ async function guardarIngreso() {
 
         <v-text-field
           v-model="busqueda"
-          prepend-inner-icon="mdi-magnify"
-          placeholder="Buscar ingresos..."
-          variant="outlined"
-          density="compact"
-          rounded="lg"
-          hide-details
           class="search-input"
+          density="compact"
+          hide-details
+          placeholder="Buscar ingresos..."
+          prepend-inner-icon="mdi-magnify"
+          rounded="lg"
+          variant="outlined"
         />
       </div>
 
@@ -193,17 +215,17 @@ async function guardarIngreso() {
           <tr v-for="ingreso in ingresos" :key="ingreso.id">
             <td>
               <div class="income-name">
-                <v-avatar color="success" variant="tonal" size="40">
+                <v-avatar color="success" size="40" variant="tonal">
                   <v-icon>mdi-arrow-down-left</v-icon>
                 </v-avatar>
 
-                <strong>{{ ingreso.name }}</strong>
+                <strong>{{ ingreso.description }}</strong>
               </div>
             </td>
 
             <td>
-              <v-chip color="primary" variant="tonal" size="small">
-                {{ ingreso.category }}
+              <v-chip color="primary" size="small" variant="tonal">
+                {{ ingreso.category?.name }}
               </v-chip>
             </td>
 
@@ -217,7 +239,7 @@ async function guardarIngreso() {
           <tr v-if="ingresos.length === 0">
             <td colspan="4">
               <div class="empty-state">
-                <v-icon size="58" color="grey-lighten-1">
+                <v-icon color="grey-lighten-1" size="58">
                   mdi-cash-remove
                 </v-icon>
 
@@ -226,8 +248,8 @@ async function guardarIngreso() {
 
                 <v-btn
                   color="primary"
-                  variant="tonal"
                   rounded="lg"
+                  variant="tonal"
                   @click="dialog = true"
                 >
                   Agregar ingreso
@@ -243,115 +265,108 @@ async function guardarIngreso() {
     <v-dialog v-model="dialog" max-width="530">
       <v-card class="dialog-card" rounded="xl">
         <v-card-title class="dialog-title">
-          <div>
-            <h3>Registrar ingreso</h3>
-            <p>Agrega una nueva entrada de dinero.</p>
-          </div>
-
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="dialog = false"
-          />
+          <h3>Nuevo ingreso</h3>
         </v-card-title>
 
         <v-card-text>
-          <v-form ref="form" @submit.prevent="guardarIngreso">
-
-            <label>Concepto</label>
+          <v-form ref="form" @submit.prevent="guardarMovimiento">
 
             <v-text-field
               v-model="concepto"
+              class="mb-3"
               placeholder="Ej. Pago de trabajo"
               prepend-inner-icon="mdi-text-box-outline"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio]"
-              class="mt-2 mb-2"
+              variant="outlined"
             />
 
             <label>Monto (USD)</label>
 
             <v-text-field
               v-model="monto"
-              type="number"
+              class="mt-2 mb-3"
               min="0.01"
-              step="0.01"
               placeholder="0.00"
               prepend-inner-icon="mdi-currency-usd"
-              variant="outlined"
               rounded="lg"
               :rules="[obligatorio, montoValido]"
-              class="mt-2 mb-2"
+              step="0.01"
+              type="number"
+              variant="outlined"
             />
 
             <!-- CATEGORÍA -->
-<div class="form-field">
-  <label>Categoría</label>
+            <div class="form-field mb-3">
+              <label>Categoría</label>
 
-  <v-select
-    v-model="categoria"
-    :items="categoriasIngresos"
-    placeholder="Selecciona una categoría"
-    prepend-inner-icon="mdi-shape-outline"
-    variant="outlined"
-    rounded="lg"
-    :rules="[obligatorio]"
-    class="mt-2"
-  />
+              <v-select
+                v-model="categoria"
+                class="mt-2"
+                item-title="title"
+                item-value="value"
+                :items="categoriasMovimiento"
+                :menu-props="{ maxHeight: 300 }"
+                placeholder="Selecciona una categoría"
+                prepend-inner-icon="mdi-shape-outline"
+                rounded="lg"
+                :rules="[obligatorio]"
+                variant="outlined"
+              />
 
-  <v-btn
-    to="/categorias"
-    variant="text"
-    color="primary"
-    size="small"
-    prepend-icon="mdi-plus-circle-outline"
-    class="category-button"
-  >
-    Administrar mis categorías
-  </v-btn>
-</div>
+              <v-btn
+                v-if="categoriasMovimiento.length === 0"
+                class="category-button"
+                color="primary"
+                prepend-icon="mdi-plus-circle-outline"
+                size="small"
+                to="/categorias"
+                variant="text"
+              >
+                Administrar mis categorías
+              </v-btn>
+            </div>
 
-<!-- FECHA -->
-<div class="form-field">
-  <label>Fecha</label>
+            <!-- FECHA -->
+            <div class="form-field mb-3">
+              <label>Fecha</label>
 
-  <v-text-field
-    v-model="fecha"
-    type="date"
-    variant="outlined"
-    rounded="lg"
-    :rules="[obligatorio]"
-    class="mt-2"
-  />
-</div>
+              <v-text-field
+                v-model="fecha"
+                class="mt-2"
+                rounded="lg"
+                :rules="[obligatorio]"
+                type="date"
+                variant="outlined"
+              />
+            </div>
 
             <label>Descripción (opcional)</label>
 
             <v-textarea
               v-model="descripcion"
+              class="mt-2 mb-2"
               placeholder="Agrega detalles sobre este ingreso..."
-              variant="outlined"
               rounded="lg"
               rows="2"
-              class="mt-2"
+              variant="outlined"
             />
 
             <div class="dialog-actions">
               <v-btn
-                variant="outlined"
                 rounded="lg"
+                variant="outlined"
                 @click="dialog = false"
               >
                 Cancelar
               </v-btn>
 
               <v-btn
-                type="submit"
                 color="primary"
-                rounded="lg"
-                prepend-icon="mdi-content-save-outline"
                 :loading="guardando"
+                prepend-icon="mdi-content-save-outline"
+                rounded="lg"
+                type="submit"
               >
                 Guardar ingreso
               </v-btn>
@@ -365,7 +380,7 @@ async function guardarIngreso() {
     <!-- NOTIFICACIÓN -->
     <v-snackbar
       v-model="snackbar"
-      color="success"
+      :color="mensaje.includes('No se pudo') ? 'error' : 'success'"
       location="top right"
       rounded="lg"
       :timeout="3500"

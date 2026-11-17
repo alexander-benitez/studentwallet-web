@@ -1,115 +1,182 @@
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+<script setup lang="ts">
+  import { ref } from 'vue'
+  import { useRouter } from 'vue-router'
 
-const router = useRouter()
-const tipoAcceso = ref('estudiante')
-const formulario = ref(null)
-const email = ref('')
-const password = ref('')
-const visible = ref(false)
-const loading = ref(false)
+  const router = useRouter()
+  const tipoAcceso = ref('estudiante')
+  const formulario = ref(null)
+  const email = ref('')
+  const password = ref('')
+  const visible = ref(false)
+  const loading = ref(false)
 
-const snackbar = ref(false)
-const message = ref('')
-const color = ref('error')
+  const snackbar = ref(false)
+  const message = ref('')
+  const color = ref('error')
 
-// VALIDACIONES
+  const forgotDialog = ref(false)
+  const forgotForm = ref(null)
+  const forgotEmail = ref('')
+  const forgotLoading = ref(false)
 
-const required = (v) =>
-  !!String(v ?? '').trim() ||
-  'Este campo es obligatorio'
+  // VALIDACIONES
 
-const validEmail = (v) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? '').trim()) ||
-  'Ingresa un correo electrónico válido'
-
-// MENSAJES
-
-function mostrarMensaje(texto, tipo = 'error') {
-  message.value = texto
-  color.value = tipo
-  snackbar.value = true
-}
-
-// INICIO DE SESIÓN CONECTADO A LARAVEL SANCTUM
-async function login() {
-  if (loading.value) return
-
-  const resultado = await formulario.value?.validate()
-
-  if (!resultado?.valid) {
-    mostrarMensaje("Revisa los campos señalados antes de continuar.")
-    return
+  function required (v) {
+    return !!String(v ?? '').trim()
+      || 'Este campo es obligatorio'
   }
 
-  if (password.value.length < 6) {
-    mostrarMensaje("La contraseña debe tener al menos 6 caracteres.")
-    return
-  }
-
-  loading.value = true
-
-  try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
-
-    const response = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        email: email.value.trim(),
-        password: password.value.trim()
-      })
-    })
-
-    const res = await response.json()
-
-    if (response.ok) {
-      const token = res.data?.token || res.token
-      const user = res.data?.user || res.user
-
-      localStorage.setItem("auth_token", token)
-      // Guardar el usuario 
-      localStorage.setItem("user_info", JSON.stringify(user))
-
-      // Verificar el rol para redirigir
-      const rolUsuario = user?.rol || user?.role || res.data?.rol || res.data?.role;
-      if (rolUsuario === 'administrador') {
-        router.push("/admin")
-      } else {
-        router.push("/dashboard")
-      }
-    } else {
-      mostrarMensaje(res.message || "Credenciales incorrectas.", "error")
+  function validEmail (v) {
+    const value = String(v ?? '').trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(value)) {
+      return 'Ingresa un correo electrónico válido'
     }
-  } catch (err) {
-    console.error("Error de red al conectar con backend:", err)
-    mostrarMensaje("No se pudo conectar con el servidor backend.", "error")
-  } finally {
-    loading.value = false
+    return value.endsWith('@gmail.com')
+      || 'Solo se aceptan correos @gmail.com'
   }
-}
+
+  // MENSAJES
+
+  function mostrarMensaje (texto, tipo = 'error') {
+    message.value = texto
+    color.value = tipo
+    snackbar.value = true
+  }
+
+  function abrirRecuperacion () {
+    forgotEmail.value = email.value.trim()
+    forgotDialog.value = true
+  }
+
+  async function enviarRecuperacion () {
+    if (forgotLoading.value) return
+
+    const resultado = await forgotForm.value?.validate()
+    if (!resultado?.valid) {
+      mostrarMensaje('Ingresa un correo válido para continuar.')
+      return
+    }
+
+    forgotLoading.value = true
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+      const response = await fetch(`${API_BASE}/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotEmail.value.trim(),
+        }),
+      })
+
+      const res = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        mostrarMensaje('Revisa tu correo para el código', 'success')
+        forgotDialog.value = false
+        router.push({ path: '/reset-password', query: { email: forgotEmail.value.trim() } })
+      } else {
+        mostrarMensaje(res.message || 'No se pudo enviar el código de recuperación.', 'error')
+      }
+    } catch (error) {
+      console.error('Error al solicitar recuperación:', error)
+      mostrarMensaje('No se pudo conectar con el servidor backend.', 'error')
+    } finally {
+      forgotLoading.value = false
+    }
+  }
+
+  // INICIO DE SESIÓN CONECTADO A LARAVEL SANCTUM
+  async function login () {
+    if (loading.value) return
+
+    const correoTrim = email.value.trim().toLowerCase()
+    const claveTrim = password.value.trim()
+
+    if (!correoTrim || !claveTrim) {
+      await formulario.value?.validate()
+      mostrarMensaje('Completa todos los campos requeridos.')
+      return
+    }
+
+    const validacionCorreo = validEmail(correoTrim)
+    if (validacionCorreo !== true) {
+      await formulario.value?.validate()
+      mostrarMensaje(validacionCorreo)
+      return
+    }
+
+    const resultado = await formulario.value?.validate()
+    if (!resultado?.valid) {
+      mostrarMensaje('Revisa los campos señalados antes de continuar.')
+      return
+    }
+
+    loading.value = true
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
+
+      const response = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.value.trim(),
+          password: password.value.trim(),
+        }),
+      })
+
+      const res = await response.json()
+
+      if (response.ok) {
+        const token = res.data?.token || res.token
+        const user = res.data?.user || res.user
+
+        localStorage.setItem('auth_token', token)
+        // Guardar el usuario
+        localStorage.setItem('user_info', JSON.stringify({ ...(user || {}), email: user?.email || email.value.trim() }))
+
+        // Verificar el rol para redirigir
+        const rolUsuario = user?.rol || user?.role || res.data?.rol || res.data?.role
+        if (rolUsuario === 'administrador') {
+          router.push('/admin')
+        } else {
+          router.push('/dashboard')
+        }
+      } else if (response.status === 429) {
+        mostrarMensaje('Demasiados intentos. Espera un momento e intenta de nuevo.', 'error')
+      } else {
+        mostrarMensaje('Correo o contraseña incorrecto.', 'error')
+      }
+    } catch (error) {
+      console.error('Error de red al conectar con backend:', error)
+      mostrarMensaje('No se pudo conectar con el servidor backend.', 'error')
+    } finally {
+      loading.value = false
+    }
+  }
 </script>
 
-
-
 <template>
-  <v-container fluid class="login-page pa-0">
-    <v-row no-gutters class="fill-height">
+  <v-container class="login-page pa-0" fluid>
+    <v-row class="fill-height" no-gutters>
 
       <!-- PANEL IZQUIERDO -->
-      <v-col cols="12" md="6" class="brand-panel">
+      <v-col class="brand-panel" cols="12" md="6">
         <div class="brand-content">
           <div class="logo">
-            <v-icon size="34" color="white">mdi-wallet</v-icon>
+            <v-icon color="white" size="34">mdi-wallet</v-icon>
             <span>StudentWallet</span>
           </div>
 
           <div class="hero">
-            <v-chip color="white" variant="outlined" class="mb-6">
+            <v-chip class="mb-6" color="white" variant="outlined">
               Tu futuro financiero empieza aquí
             </v-chip>
 
@@ -128,10 +195,12 @@ async function login() {
                 <v-icon>mdi-check-circle</v-icon>
                 Control de ingresos y gastos
               </div>
+
               <div>
                 <v-icon>mdi-check-circle</v-icon>
                 Metas de ahorro inteligentes
               </div>
+
               <div>
                 <v-icon>mdi-check-circle</v-icon>
                 Estadísticas financieras
@@ -144,33 +213,40 @@ async function login() {
           </p>
         </div>
 
-        <div class="glow glow-one"></div>
-        <div class="glow glow-two"></div>
+        <div class="glow glow-one" />
+        <div class="glow glow-two" />
       </v-col>
 
       <!-- PANEL DERECHO -->
-      <v-col cols="12" md="6" class="form-panel">
+      <v-col class="form-panel" cols="12" md="6">
         <v-card class="login-card" elevation="0">
           <div class="welcome-icon">
-            <v-icon size="30" color="primary">
+            <v-icon color="primary" size="30">
               mdi-shield-account
             </v-icon>
           </div>
 
           <h2>Bienvenido de nuevo</h2>
+
           <p class="subtitle">
-            Ingresa tus credenciales para continuar.
+            Ingresa tus credenciales para continuar. Utiliza únicamente tu correo
+            <strong>@gmail.com</strong> (no se admiten otros dominios).
           </p>
 
           <v-form ref="formulario" @submit.prevent="login">
-            <div class="mb-6">
+            <div class="d-none">
               <label>Tipo de acceso</label>
 
-              <v-item-group v-model="tipoAcceso" mandatory class="d-none">
+              <v-item-group v-model="tipoAcceso" class="d-none" mandatory>
                 <v-item v-slot="{ isSelected, toggle }" value="estudiante">
-                  <v-card class="access-option" :class="{ 'access-selected': isSelected }" variant="outlined"
-                    rounded="lg" @click="toggle">
-                    <v-icon size="27" color="primary" class="mb-2">
+                  <v-card
+                    class="access-option"
+                    :class="{ 'access-selected': isSelected }"
+                    rounded="lg"
+                    variant="outlined"
+                    @click="toggle"
+                  >
+                    <v-icon class="mb-2" color="primary" size="27">
                       mdi-school-outline
                     </v-icon>
 
@@ -180,9 +256,14 @@ async function login() {
                 </v-item>
 
                 <v-item v-slot="{ isSelected, toggle }" value="administrador">
-                  <v-card class="access-option" :class="{ 'access-selected': isSelected }" variant="outlined"
-                    rounded="lg" @click="toggle">
-                    <v-icon size="27" color="#7C3AED" class="mb-2">
+                  <v-card
+                    class="access-option"
+                    :class="{ 'access-selected': isSelected }"
+                    rounded="lg"
+                    variant="outlined"
+                    @click="toggle"
+                  >
+                    <v-icon class="mb-2" color="#7C3AED" size="27">
                       mdi-shield-account-outline
                     </v-icon>
 
@@ -192,29 +273,59 @@ async function login() {
                 </v-item>
               </v-item-group>
             </div>
+
             <label>Correo electrónico</label>
-            <v-text-field v-model="email" type="email" autocomplete="email" placeholder="ejemplo@correo.com"
-              prepend-inner-icon="mdi-email-outline" variant="outlined" rounded="lg" :rules="[required, validEmail]"
-              :disabled="loading" class="mt-2 mb-3" />
+
+            <v-text-field
+              v-model="email"
+              autocomplete="email"
+              class="mt-2 mb-3"
+              :disabled="loading"
+              placeholder="usuario@gmail.com"
+              prepend-inner-icon="mdi-email-outline"
+              rounded="lg"
+              :rules="[required, validEmail]"
+              type="email"
+              variant="outlined"
+            />
 
             <label>Contraseña</label>
-            <v-text-field v-model="password" placeholder="Ingresa tu contraseña" prepend-inner-icon="mdi-lock-outline"
-              :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'" :type="visible ? 'text' : 'password'"
-              autocomplete="current-password" variant="outlined" rounded="lg" :rules="[required]" :disabled="loading"
-              class="mt-2" @click:append-inner="visible = !visible" />
+
+            <v-text-field
+              v-model="password"
+              :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
+              autocomplete="current-password"
+              class="mt-2"
+              :disabled="loading"
+              placeholder="Ingresa tu contraseña"
+              prepend-inner-icon="mdi-lock-outline"
+              rounded="lg"
+              :rules="[required]"
+              :type="visible ? 'text' : 'password'"
+              variant="outlined"
+              @click:append-inner="visible = !visible"
+            />
 
             <div class="text-right mb-6">
-              <a href="#" class="forgot" @click.prevent="
-                message = 'La recuperación de contraseña estará disponible próximamente.';
-              color = 'info';
-              snackbar = true
-                ">
+              <a
+                class="forgot"
+                href="#"
+                @click.prevent="abrirRecuperacion"
+              >
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
 
-            <v-btn type="submit" color="primary" block size="x-large" rounded="lg" :loading="loading" class="login-btn"
-              append-icon="mdi-arrow-right">
+            <v-btn
+              append-icon="mdi-arrow-right"
+              block
+              class="login-btn"
+              color="primary"
+              :loading="loading"
+              rounded="lg"
+              size="x-large"
+              type="submit"
+            >
               Iniciar sesión
             </v-btn>
           </v-form>
@@ -234,7 +345,54 @@ async function login() {
       </v-col>
     </v-row>
 
-    <v-snackbar v-model="snackbar" :color="color" location="top right" :timeout="3500" rounded="lg">
+    <v-dialog v-model="forgotDialog" max-width="460">
+      <v-card class="pa-2" rounded="lg">
+        <v-card-title class="text-h6 font-weight-bold">
+          Recuperar contraseña
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4 text-body-2">
+            Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.
+          </p>
+          <v-form ref="forgotForm" @submit.prevent="enviarRecuperacion">
+            <label>Correo electrónico</label>
+            <v-text-field
+              v-model="forgotEmail"
+              autocomplete="email"
+              class="mt-2"
+              :disabled="forgotLoading"
+              placeholder="ejemplo@correo.com"
+              prepend-inner-icon="mdi-email-outline"
+              rounded="lg"
+              :rules="[required, validEmail]"
+              type="email"
+              variant="outlined"
+            />
+            <v-btn
+              block
+              class="mt-2"
+              color="primary"
+              :loading="forgotLoading"
+              rounded="lg"
+              type="submit"
+            >
+              Enviar código
+            </v-btn>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="forgotDialog = false">Cancelar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-snackbar
+      v-model="snackbar"
+      :color="color"
+      location="top right"
+      rounded="lg"
+      :timeout="3500"
+    >
       {{ message }}
       <template #actions>
         <v-btn icon="mdi-close" variant="text" @click="snackbar = false" />

@@ -1,306 +1,306 @@
+<script setup lang="ts">
+  import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip,
+  } from 'chart.js'
+  import { computed, onMounted, ref } from 'vue'
+  import { Bar, Doughnut } from 'vue-chartjs'
+  import { useRouter } from 'vue-router'
+  import { useTheme } from 'vuetify'
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useTheme } from 'vuetify'
+  ChartJS.register(
+    Title,
+    Tooltip,
+    Legend,
+    BarElement,
+    ArcElement,
+    CategoryScale,
+    LinearScale,
+  )
 
-import { Bar, Doughnut } from 'vue-chartjs'
+  const router = useRouter()
+  const theme = useTheme()
 
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  ArcElement,
-  CategoryScale,
-  LinearScale
-)
+  const anioSeleccionado = ref(new Date().getFullYear())
+  const movimientos = ref([])
+  const saldoBalance = ref(null)
 
-const router = useRouter()
-const theme = useTheme()
+  const nombresMeses = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  ]
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"
-
-const anioSeleccionado = ref(new Date().getFullYear())
-const movimientos = ref([])
-const saldoBalance = ref(null)
-
-const nombresMeses = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-]
-
-const dinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(valor)
-
-// TOTALES DE INGRESOS Y GASTOS
-const totalIngresos = computed(() =>
-  movimientos.value
-    .filter(m => m.type === 'ingreso')
-    .reduce((total, m) => total + Number(m.amount || 0), 0)
-)
-
-const totalGastos = computed(() =>
-  movimientos.value
-    .filter(m => m.type === 'gasto')
-    .reduce((total, m) => total + Number(m.amount || 0), 0)
-)
-
-// TARJETAS DE RESUMEN
-const finanzas = computed(() => ({
-  ingresos: totalIngresos.value,
-  gastos: totalGastos.value,
-  saldo: saldoBalance.value ?? (totalIngresos.value - totalGastos.value),
-}))
-
-async function cargarEstadisticas() {
-  const headers = {
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(valor)
   }
 
-  try {
-    const [respuestaTransacciones, respuestaBalance] = await Promise.all([
-      fetch(`${API_BASE}/transactions`, { headers }),
-      fetch(`${API_BASE}/balance`, { headers }),
-    ])
+  // TOTALES DE INGRESOS Y GASTOS
+  const totalIngresos = computed(() =>
+    movimientos.value
+      .filter(m => m.type === 'ingreso')
+      .reduce((total, m) => total + Number(m.amount || 0), 0),
+  )
 
-    if (respuestaTransacciones.ok) {
-      const datos = await respuestaTransacciones.json()
+  const totalGastos = computed(() =>
+    movimientos.value
+      .filter(m => m.type === 'gasto')
+      .reduce((total, m) => total + Number(m.amount || 0), 0),
+  )
 
-      movimientos.value = (datos.data || []).map(m => ({
-        ...m,
-        amount: Number(m.amount) || 0,
-        category: m.category?.name || 'Otros',
-      }))
+  // TARJETAS DE RESUMEN
+  const finanzas = computed(() => ({
+    ingresos: totalIngresos.value,
+    gastos: totalGastos.value,
+    saldo: saldoBalance.value != null ? saldoBalance.value : (totalIngresos.value - totalGastos.value),
+  }))
+
+  async function cargarEstadisticas () {
+    const headers = {
+      Accept: 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
     }
 
-    if (respuestaBalance.ok) {
-      const datos = await respuestaBalance.json()
-      saldoBalance.value = Number(datos.data?.balance) || 0
+    try {
+      const [respuestaTransacciones, respuestaBalance] = await Promise.all([
+        fetch(`${API_BASE}/transactions`, { headers }),
+        fetch(`${API_BASE}/balance`, { headers }),
+      ])
+
+      if (respuestaTransacciones.ok) {
+        const datos = await respuestaTransacciones.json()
+
+        movimientos.value = (datos.data || []).map(m => ({
+          ...m,
+          amount: Number(m.amount) || 0,
+          category: m.category?.name || 'Otros',
+        }))
+      }
+
+      if (respuestaBalance.ok) {
+        const datos = await respuestaBalance.json()
+        saldoBalance.value = Number(datos.data?.balance) || 0
+      }
+    } catch (error) {
+      console.error('Error al cargar las estadísticas:', error)
     }
-  } catch (error) {
-    console.error('Error al cargar las estadísticas:', error)
   }
-}
 
-onMounted(() => {
-  cargarEstadisticas()
-})
-
-// GRÁFICO: INGRESOS VS GASTOS
-const datosBarras = computed(() => {
-  const ingresos = Array(12).fill(0);
-  const gastos = Array(12).fill(0);
-
-  movimientos.value.forEach(m => {
-    if (!m.date) return
-
-    const partes = m.date.split('-')
-    const anio = Number(partes[0])
-    const mes = Number(partes[1]) - 1
-    const monto = Number(m.amount)
-
-    if (
-      anio !== anioSeleccionado.value ||
-      mes < 0 ||
-      mes > 11 ||
-      !Number.isFinite(monto)
-    ) return
-
-    if (m.type === 'ingreso') ingresos[mes] += monto
-    if (m.type === 'gasto') gastos[mes] += monto
+  onMounted(() => {
+    cargarEstadisticas()
   })
 
-  return {
-    labels: nombresMeses,
-    datasets: [
-      {
-        label: 'Ingresos',
-        data: ingresos,
-        backgroundColor: '#10B981',
-        borderRadius: 8,
-        maxBarThickness: 35,
-      },
-      {
-        label: 'Gastos',
-        data: gastos,
-        backgroundColor: '#EF4444',
-        borderRadius: 8,
-        maxBarThickness: 35,
-      },
-    ],
-  }
-})
+  // GRÁFICO: INGRESOS VS GASTOS
+  const datosBarras = computed(() => {
+    const ingresos = Array.from({ length: 12 }, () => 0)
+    const gastos = Array.from({ length: 12 }, () => 0)
 
-// GRÁFICO: GASTOS POR CATEGORÍA
-const datosCategorias = computed(() => {
-  const totales = {};
+    for (const m of movimientos.value) {
+      if (!m.date) continue
 
-  movimientos.value.forEach(m => {
-    if (
-      m.type !== 'gasto' ||
-      !m.date?.startsWith(String(anioSeleccionado.value))
-    ) return
+      const partes = m.date.split('-')
+      const anio = Number(partes[0])
+      const mes = Number(partes[1]) - 1
+      const monto = Number(m.amount)
 
-    const categoria = m.category || 'Otros'
-    const monto = Number(m.amount)
+      if (
+        anio !== anioSeleccionado.value
+        || mes < 0
+        || mes > 11
+        || !Number.isFinite(monto)
+      ) continue
 
-    if (!Number.isFinite(monto)) return
+      if (m.type === 'ingreso') ingresos[mes] += monto
+      if (m.type === 'gasto') gastos[mes] += monto
+    }
 
-    totales[categoria] = (totales[categoria] || 0) + monto
+    return {
+      labels: nombresMeses,
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: ingresos,
+          backgroundColor: '#10B981',
+          borderRadius: 8,
+          maxBarThickness: 35,
+        },
+        {
+          label: 'Gastos',
+          data: gastos,
+          backgroundColor: '#EF4444',
+          borderRadius: 8,
+          maxBarThickness: 35,
+        },
+      ],
+    }
   })
 
-  if (Object.keys(totales).length === 0) return {}
+  // GRÁFICO: GASTOS POR CATEGORÍA
+  const datosCategorias = computed(() => {
+    const totales: Record<string, number> = {}
 
-  return {
-    labels: Object.keys(totales),
-    datasets: [
-      {
-        data: Object.values(totales),
-        backgroundColor: [
-          '#2563EB',
-          '#7C3AED',
-          '#10B981',
-          '#F59E0B',
-          '#EC4899',
-          '#06B6D4',
-          '#64748B',
-        ],
-        borderWidth: 3,
-        borderColor: theme.current.value.dark
-          ? '#111C2E'
-          : '#FFFFFF',
-        hoverOffset: 10,
-      },
-    ],
-  }
-})
+    for (const m of movimientos.value) {
+      if (
+        m.type !== 'gasto'
+        || !m.date?.startsWith(String(anioSeleccionado.value))
+      ) continue
 
-// OPCIONES DEL GRÁFICO DE BARRAS
-const opcionesBarras = computed(() => {
-  const oscuro = theme.current.value.dark
-  const colorTexto = theme.current.value.colors['on-surface']
-  const colorSecundario =
-    theme.current.value.colors['on-surface-variant']
+      const categoria = m.category || 'Otros'
+      const monto = Number(m.amount)
 
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          color: colorTexto,
-          padding: 20,
-          usePointStyle: true,
-        },
-      },
-      tooltip: {
-        backgroundColor: oscuro ? '#111C2E' : '#FFFFFF',
-        titleColor: colorTexto,
-        bodyColor: colorTexto,
-        borderColor: oscuro ? '#263449' : '#E9EDF5',
-        borderWidth: 1,
-        callbacks: {
-          label: context =>
-            `${context.dataset.label}: ${dinero(context.parsed.y)}`,
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: colorSecundario,
-          callback: valor => `$${valor}`,
-        },
-        grid: {
-          color: oscuro
-            ? 'rgba(203, 213, 225, 0.12)'
-            : 'rgba(100, 116, 139, 0.15)',
-        },
-        border: {
-          color: oscuro ? '#263449' : '#E9EDF5',
-        },
-      },
-      x: {
-        ticks: {
-          color: colorSecundario,
-        },
-        grid: {
-          display: false,
-        },
-        border: {
-          color: oscuro ? '#263449' : '#E9EDF5',
-        },
-      },
-    },
-  }
-})
+      if (!Number.isFinite(monto)) continue
 
-// OPCIONES DEL GRÁFICO DE DONA
-const opcionesCategorias = computed(() => {
-  const oscuro = theme.current.value.dark
-  const colorTexto = theme.current.value.colors['on-surface']
+      totales[categoria] = (totales[categoria] || 0) + monto
+    }
 
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '70%',
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: colorTexto,
-          padding: 18,
-          usePointStyle: true,
+    if (Object.keys(totales).length === 0) {
+      return { labels: [], datasets: [] }
+    }
+
+    return {
+      labels: Object.keys(totales),
+      datasets: [
+        {
+          data: Object.values(totales),
+          backgroundColor: [
+            '#2563EB',
+            '#7C3AED',
+            '#10B981',
+            '#F59E0B',
+            '#EC4899',
+            '#06B6D4',
+            '#64748B',
+          ],
+          borderWidth: 3,
+          borderColor: theme.current.value.dark
+            ? '#111C2E'
+            : '#FFFFFF',
+          hoverOffset: 10,
+        },
+      ],
+    }
+  })
+
+  // OPCIONES DEL GRÁFICO DE BARRAS
+  const opcionesBarras = computed(() => {
+    const oscuro = theme.current.value.dark
+    const colorTexto = String(theme.current.value.colors['on-surface'])
+    const colorSecundario
+      = String(theme.current.value.colors['on-surface-variant'])
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+          labels: {
+            color: colorTexto,
+            padding: 20,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          backgroundColor: oscuro ? '#111C2E' : '#FFFFFF',
+          titleColor: colorTexto,
+          bodyColor: colorTexto,
+          borderColor: oscuro ? '#263449' : '#E9EDF5',
+          borderWidth: 1,
+          callbacks: {
+            label: context =>
+              `${context.dataset.label}: ${dinero(context.parsed.y)}`,
+          },
         },
       },
-      tooltip: {
-        backgroundColor: oscuro ? '#111C2E' : '#FFFFFF',
-        titleColor: colorTexto,
-        bodyColor: colorTexto,
-        borderColor: oscuro ? '#263449' : '#E9EDF5',
-        borderWidth: 1,
-        callbacks: {
-          label: context =>
-            `${context.label}: ${dinero(context.parsed)}`,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: colorSecundario,
+            callback: valor => `$${valor}`,
+          },
+          grid: {
+            color: oscuro
+              ? 'rgba(203, 213, 225, 0.12)'
+              : 'rgba(100, 116, 139, 0.15)',
+          },
+          border: {
+            color: oscuro ? '#263449' : '#E9EDF5',
+          },
+        },
+        x: {
+          ticks: {
+            color: colorSecundario,
+          },
+          grid: {
+            display: false,
+          },
+          border: {
+            color: oscuro ? '#263449' : '#E9EDF5',
+          },
         },
       },
-    },
-  }
-})
+    }
+  })
 
-// COMPROBAR SI EXISTEN GASTOS
-const hayGastos = computed(() =>
-  datosCategorias.value.datasets?.[0]?.data?.some(valor => valor > 0) ?? false
-)
+  // OPCIONES DEL GRÁFICO DE DONA
+  const opcionesCategorias = computed(() => {
+    const oscuro = theme.current.value.dark
+    const colorTexto = String(theme.current.value.colors['on-surface'])
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%' as const,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            color: colorTexto,
+            padding: 18,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          backgroundColor: oscuro ? '#111C2E' : '#FFFFFF',
+          titleColor: colorTexto,
+          bodyColor: colorTexto,
+          borderColor: oscuro ? '#263449' : '#E9EDF5',
+          borderWidth: 1,
+          callbacks: {
+            label: context =>
+              `${context.label}: ${dinero(context.parsed)}`,
+          },
+        },
+      },
+    }
+  })
+
+  // COMPROBAR SI EXISTEN GASTOS
+  const hayGastos = computed(() =>
+    datosCategorias.value.datasets?.[0]?.data?.some(valor => valor > 0) ?? false,
+  )
 </script>
 
 <template>
-  <v-container fluid class="statistics-page pa-4 pa-md-8">
+  <v-container class="statistics-page pa-4 pa-md-8" fluid>
 
     <!-- ENCABEZADO -->
     <v-btn
-      color="primary"
-      variant="text"
-      prepend-icon="mdi-arrow-left"
       class="mb-4"
+      color="primary"
+      prepend-icon="mdi-arrow-left"
+      variant="text"
       @click="router.push('/dashboard')"
     >
       Volver al Dashboard
@@ -372,10 +372,10 @@ const hayGastos = computed(() =>
 
         <input
           v-model.number="anioSeleccionado"
-          type="number"
-          min="2000"
           max="2100"
-        />
+          min="2000"
+          type="number"
+        >
       </div>
     </div>
 
@@ -427,7 +427,7 @@ const hayGastos = computed(() =>
           </div>
 
           <div v-else class="chart-empty">
-            <v-icon size="55" color="grey-lighten-1">
+            <v-icon color="grey-lighten-1" size="55">
               mdi-chart-donut
             </v-icon>
 

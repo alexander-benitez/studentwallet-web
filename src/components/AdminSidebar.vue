@@ -1,57 +1,80 @@
+<script setup lang="ts">
+  import { useRoute, useRouter } from 'vue-router'
 
-<script setup>
-import { useRoute } from 'vue-router'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-defineProps({
-  modelValue: {
-    type: Boolean,
-    default: true,
-  },
-})
+  defineProps({
+    modelValue: {
+      type: Boolean,
+      default: true,
+    },
+  })
 
-const emit = defineEmits(['update:modelValue'])
-const route = useRoute()
+  const emit = defineEmits(['update:model-value'])
+  const route = useRoute()
+  const router = useRouter()
 
-const menu = [
-  {
-    title: 'Dashboard',
-    icon: 'mdi-view-dashboard-outline',
-    to: '/admin',
-  },
-  {
-    title: 'Usuarios',
-    icon: 'mdi-account-group-outline',
-    to: '/admin/usuarios',
-  },
-  {
-    title: 'Finanzas',
-    icon: 'mdi-finance',
-    to: '/admin/finanzas',
-  },
-  {
-    title: 'Comentarios',
-    icon: 'mdi-message-text-outline',
-    to: '/admin/comentarios',
-  },
-  {
-    title: 'Reportes',
-    icon: 'mdi-file-chart-outline',
-    to: '/admin/reportes',
-  },
-  {
-    title: 'Configuración',
-    icon: 'mdi-cog-outline',
-    to: '/admin/configuracion',
-  },
-]
+  async function logout () {
+    const token = localStorage.getItem('auth_token')
+
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión en el servidor:', error)
+    } finally {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_info')
+      router.push('/')
+    }
+  }
+
+  const menu = [
+    {
+      title: 'Dashboard',
+      icon: 'mdi-view-dashboard-outline',
+      to: '/admin',
+    },
+    {
+      title: 'Usuarios',
+      icon: 'mdi-account-group-outline',
+      to: '/admin/usuarios',
+    },
+    {
+      title: 'Finanzas',
+      icon: 'mdi-finance',
+      to: '/admin/finanzas',
+    },
+    {
+      title: 'Comentarios',
+      icon: 'mdi-message-text-outline',
+      to: '/admin/comentarios',
+    },
+    {
+      title: 'Reportes',
+      icon: 'mdi-file-chart-outline',
+      to: '/admin/reportes',
+    },
+    {
+      title: 'Configuración',
+      icon: 'mdi-cog-outline',
+      to: '/admin/configuracion',
+    },
+  ]
 </script>
 
 <template>
   <v-navigation-drawer
+    color="#14213D"
     :model-value="modelValue"
     width="270"
-    color="#14213D"
-    @update:model-value="emit('update:modelValue', $event)"
+    @update:model-value="emit('update:model-value', $event)"
   >
     <div class="sidebar-content">
       <div class="brand">
@@ -71,17 +94,17 @@ const menu = [
         MENÚ ADMINISTRATIVO
       </div>
 
-      <v-list nav class="menu-list">
+      <v-list class="menu-list" nav>
         <v-list-item
           v-for="item in menu"
           :key="item.to"
-          :to="item.to"
-          :prepend-icon="item.icon"
-          :title="item.title"
           :active="route.path === item.to"
           active-class="admin-active"
-          rounded="lg"
           class="menu-item"
+          :prepend-icon="item.icon"
+          rounded="lg"
+          :title="item.title"
+          :to="item.to"
         />
       </v-list>
 
@@ -102,12 +125,12 @@ const menu = [
         </div>
 
         <v-btn
-          to="/"
-          variant="tonal"
-          color="white"
           block
-          prepend-icon="mdi-logout"
           class="mt-4"
+          color="white"
+          prepend-icon="mdi-logout"
+          variant="tonal"
+          @click="logout"
         >
           Cerrar sesión
         </v-btn>

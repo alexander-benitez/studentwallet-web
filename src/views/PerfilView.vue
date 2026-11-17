@@ -1,102 +1,114 @@
+<script setup lang="ts">
+  import { computed, onMounted, ref, watch } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
+  const formulario = ref(null)
+  const guardando = ref(false)
+  const snackbar = ref(false)
+  const snackbarColor = ref('success')
+  const mensaje = ref('')
 
-const formulario = ref(null)
-const guardando = ref(false)
-const snackbar = ref(false)
-const mensaje = ref('')
+  const datos = ref({
+    nombre: '',
+    apellido: '',
+    correo: '',
+    universidad: '',
+    carrera: '',
+  })
 
-const datos = ref({
-  nombre: '',
-  apellido: '',
-  correo: '',
-  universidad: '',
-  carrera: '',
-})
-
-function cargarPerfil() {
-  datos.value = {
-    nombre: finanzas?.perfil?.nombre || '',
-    apellido: finanzas?.perfil?.apellido || '',
-    correo: finanzas?.perfil?.correo || '',
-    universidad: finanzas?.perfil?.universidad || '',
-    carrera: finanzas?.perfil?.carrera || '',
+  function cargarPerfil () {
+    datos.value = {
+      nombre: finanzas?.perfil?.nombre || '',
+      apellido: finanzas?.perfil?.apellido || '',
+      correo: finanzas?.perfil?.correo || '',
+      universidad: finanzas?.perfil?.universidad || '',
+      carrera: finanzas?.perfil?.carrera || '',
+    }
   }
-}
 
-cargarPerfil()
-
-const nombreVistaPrevia = computed(() => {
-  return (
-    `${datos.value.nombre} ${datos.value.apellido}`.trim() ||
-    'Estudiante'
-  )
-})
-
-const inicialesVistaPrevia = computed(() => {
-  const nombre = datos.value.nombre.trim().charAt(0) || 'E'
-  const apellido = datos.value.apellido.trim().charAt(0)
-  return `${nombre}${apellido}`.toUpperCase()
-})
-
-const nombreObligatorio = v =>
-  !!String(v ?? '').trim() || 'Este campo es obligatorio'
-
-const correoValido = v =>
-  !v ||
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ||
-  'Ingresa un correo electrónico válido'
-
-const hayCambios = computed(() =>
-  ['nombre', 'apellido', 'correo', 'universidad', 'carrera']
-    .some(campo =>
-      datos.value[campo] !== ((finanzas?.perfil || {})[campo] || '')
-    )
-)
-
-watch(
-  () => finanzas?.perfil,
-  cargarPerfil,
-  { deep: true }
-)
-
-async function guardarPerfil() {
-  const resultado = await formulario.value.validate()
-  if (!resultado.valid) return
-
-  guardando.value = true
-
-  try {
-    finanzas?.actualizarPerfil(datos.value)
-    mensaje.value = 'Tu perfil se actualizó correctamente'
-    snackbar.value = true
-  } finally {
-    guardando.value = false
-  }
-}
-
-function descartarCambios() {
   cargarPerfil()
-  formulario.value?.resetValidation()
-}
+  onMounted(() => {
+    finanzas?.cargarPerfil()
+  })
+
+  const nombreVistaPrevia = computed(() => {
+    return (
+      `${datos.value.nombre} ${datos.value.apellido}`.trim()
+      || 'Estudiante'
+    )
+  })
+
+  const inicialesVistaPrevia = computed(() => {
+    const nombre = datos.value.nombre.trim().charAt(0) || 'E'
+    const apellido = datos.value.apellido.trim().charAt(0)
+    return `${nombre}${apellido}`.toUpperCase()
+  })
+
+  function nombreObligatorio (v) {
+    return !!String(v ?? '').trim() || 'Este campo es obligatorio'
+  }
+
+  function correoValido (v) {
+    return !v
+      || /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(v)
+      || 'Ingresa un correo electrónico válido'
+  }
+
+  const hayCambios = computed(() =>
+    ['nombre', 'apellido', 'universidad', 'carrera']
+      .some(campo =>
+        datos.value[campo] !== ((finanzas?.perfil || {})[campo] || ''),
+      ),
+  )
+
+  watch(
+    () => finanzas?.perfil,
+    cargarPerfil,
+    { deep: true },
+  )
+
+  async function guardarPerfil () {
+    const resultado = await formulario.value.validate()
+    if (!resultado.valid) return
+
+    guardando.value = true
+
+    try {
+      const res = await finanzas?.actualizarPerfil(datos.value)
+      if (res?.ok) {
+        snackbarColor.value = 'success'
+        mensaje.value = res.mensaje || 'Tu perfil se actualizó correctamente'
+        snackbar.value = true
+      } else {
+        snackbarColor.value = 'error'
+        mensaje.value = res?.mensaje || 'No se pudo actualizar tu perfil'
+        snackbar.value = true
+      }
+    } finally {
+      guardando.value = false
+    }
+  }
+
+  function descartarCambios () {
+    cargarPerfil()
+    formulario.value?.resetValidation()
+  }
 </script>
 
 <template>
-  <v-container fluid class="profile-page pa-4 pa-md-8">
+  <v-container class="profile-page pa-4 pa-md-8" fluid>
     <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
+          class="mb-3"
+          color="primary"
           prepend-icon="mdi-arrow-left"
           variant="text"
-          color="primary"
-          class="mb-3"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
@@ -106,7 +118,7 @@ function descartarCambios() {
         <p>Administra tu información personal en StudentWallet.</p>
       </div>
 
-      <v-chip color="primary" variant="tonal" size="large">
+      <v-chip color="primary" size="large" variant="tonal">
         <v-icon start>mdi-account-circle-outline</v-icon>
         Perfil de estudiante
       </v-chip>
@@ -116,10 +128,10 @@ function descartarCambios() {
       <!-- TARJETA DEL PERFIL -->
       <v-col cols="12" md="4">
         <v-card class="profile-card" elevation="0">
-          <div class="profile-banner"></div>
+          <div class="profile-banner" />
 
           <div class="profile-content">
-            <v-avatar size="108" class="profile-avatar">
+            <v-avatar class="profile-avatar" size="108">
               <span>{{ inicialesVistaPrevia }}</span>
             </v-avatar>
 
@@ -130,10 +142,10 @@ function descartarCambios() {
             </p>
 
             <v-chip
-              color="primary"
-              variant="tonal"
               class="mt-3"
+              color="primary"
               prepend-icon="mdi-school-outline"
+              variant="tonal"
             >
               Estudiante
             </v-chip>
@@ -147,6 +159,7 @@ function descartarCambios() {
 
               <div>
                 <span>Universidad</span>
+
                 <strong>
                   {{ datos.universidad || 'No especificada' }}
                 </strong>
@@ -160,20 +173,12 @@ function descartarCambios() {
 
               <div>
                 <span>Carrera</span>
+
                 <strong>
                   {{ datos.carrera || 'No especificada' }}
                 </strong>
               </div>
             </div>
-
-            <v-alert
-              type="info"
-              variant="tonal"
-              density="comfortable"
-              class="mt-6"
-            >
-              Tu información se guarda en este navegador.
-            </v-alert>
           </div>
         </v-card>
       </v-col>
@@ -203,12 +208,12 @@ function descartarCambios() {
 
                 <v-text-field
                   v-model="datos.nombre"
+                  class="mt-2"
                   placeholder="Tu nombre"
                   prepend-inner-icon="mdi-account-outline"
-                  variant="outlined"
                   rounded="lg"
                   :rules="[nombreObligatorio]"
-                  class="mt-2"
+                  variant="outlined"
                 />
               </v-col>
 
@@ -217,11 +222,11 @@ function descartarCambios() {
 
                 <v-text-field
                   v-model="datos.apellido"
+                  class="mt-2"
                   placeholder="Tu apellido"
                   prepend-inner-icon="mdi-account-outline"
-                  variant="outlined"
                   rounded="lg"
-                  class="mt-2"
+                  variant="outlined"
                 />
               </v-col>
 
@@ -229,14 +234,18 @@ function descartarCambios() {
                 <label>Correo electrónico</label>
 
                 <v-text-field
-                  v-model="datos.correo"
-                  type="email"
-                  placeholder="ejemplo@correo.com"
-                  prepend-inner-icon="mdi-email-outline"
-                  variant="outlined"
-                  rounded="lg"
-                  :rules="[correoValido]"
+                  :model-value="datos.correo"
+                  append-inner-icon="mdi-lock-outline"
                   class="mt-2"
+                  disabled
+                  hint="Correo vinculado a tu cuenta (no editable)"
+                  persistent-hint
+                  placeholder=""
+                  prepend-inner-icon="mdi-email-outline"
+                  readonly
+                  rounded="lg"
+                  type="email"
+                  variant="outlined"
                 />
               </v-col>
 
@@ -245,11 +254,11 @@ function descartarCambios() {
 
                 <v-text-field
                   v-model="datos.universidad"
+                  class="mt-2"
                   placeholder="Ej. ITCA-FEPADE"
                   prepend-inner-icon="mdi-school-outline"
-                  variant="outlined"
                   rounded="lg"
-                  class="mt-2"
+                  variant="outlined"
                 />
               </v-col>
 
@@ -258,65 +267,49 @@ function descartarCambios() {
 
                 <v-text-field
                   v-model="datos.carrera"
+                  class="mt-2"
                   placeholder="Ej. Desarrollo de Software"
                   prepend-inner-icon="mdi-book-open-outline"
-                  variant="outlined"
                   rounded="lg"
-                  class="mt-2"
+                  variant="outlined"
                 />
               </v-col>
             </v-row>
 
             <v-alert
               v-if="hayCambios"
+              class="mb-5"
+              density="compact"
               type="warning"
               variant="tonal"
-              density="compact"
-              class="mb-5"
             >
               Tienes cambios sin guardar.
             </v-alert>
 
             <div class="form-actions">
               <v-btn
-                variant="outlined"
                 color="secondary"
-                rounded="lg"
                 :disabled="!hayCambios || guardando"
+                rounded="lg"
+                variant="outlined"
                 @click="descartarCambios"
               >
                 Descartar cambios
               </v-btn>
 
               <v-btn
-                type="submit"
                 color="primary"
-                size="large"
-                rounded="lg"
-                prepend-icon="mdi-content-save-outline"
-                :loading="guardando"
                 :disabled="!hayCambios"
+                :loading="guardando"
+                prepend-icon="mdi-content-save-outline"
+                rounded="lg"
+                size="large"
+                type="submit"
               >
                 Guardar cambios
               </v-btn>
             </div>
           </v-form>
-        </v-card>
-
-        <!-- INFORMACIÓN ADICIONAL -->
-        <v-card class="info-card mt-5" elevation="0">
-          <v-icon color="primary" size="28">
-            mdi-shield-check-outline
-          </v-icon>
-
-          <div>
-            <h3>Tu información personal</h3>
-            <p>
-              Los datos de este perfil se almacenan localmente.
-              Por ahora no están sincronizados con una cuenta
-              ni con una base de datos.
-            </p>
-          </div>
         </v-card>
       </v-col>
     </v-row>
@@ -324,12 +317,14 @@ function descartarCambios() {
     <!-- NOTIFICACIÓN -->
     <v-snackbar
       v-model="snackbar"
-      color="success"
+      :color="snackbarColor"
       location="top right"
       rounded="lg"
       :timeout="3500"
     >
-      <v-icon class="mr-2">mdi-check-circle-outline</v-icon>
+      <v-icon class="mr-2">
+        {{ snackbarColor === 'success' ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline' }}
+      </v-icon>
       {{ mensaje }}
     </v-snackbar>
   </v-container>

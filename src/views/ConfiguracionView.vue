@@ -1,320 +1,330 @@
-<script setup>
+<script setup lang="ts">
 
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFinanzasStore } from '@/stores/finanzas'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+  import { jsPDF } from 'jspdf'
+  import autoTable from 'jspdf-autotable'
+  import { computed, onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useFinanzasStore } from '@/stores/finanzas'
 
-const router = useRouter()
-const finanzas = useFinanzasStore()
+  const router = useRouter()
+  const finanzas = useFinanzasStore()
 
-const dialogRestablecer = ref(false)
-const snackbar = ref(false)
-const mensaje = ref('')
-const colorMensaje = ref('success')
+  const dialogRestablecer = ref(false)
+  const snackbar = ref(false)
+  const mensaje = ref('')
+  const colorMensaje = ref('success')
 
-const preferencias = computed(() => finanzas?.configuracion || {})
+  const preferencias = computed(() => finanzas?.configuracion || {})
 
-const dinero = valor =>
-  new Intl.NumberFormat('es-SV', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(Number(valor) || 0)
-
-function actualizarPreferencia(campo, valor) {
-  finanzas?.actualizarConfiguracion({
-    [campo]: valor,
-  })
-
-  notificar('Preferencia guardada correctamente')
-}
-
-function notificar(texto, color = 'success') {
-  mensaje.value = texto
-  colorMensaje.value = color
-  snackbar.value = true
-}
-
-function restablecerPreferencias() {
-  finanzas?.restablecerConfiguracion()
-  dialogRestablecer.value = false
-  notificar('Configuración restablecida correctamente')
-}
-
-// Convierte los nombres de campos en etiquetas legibles.
-function etiquetaCampo(campo) {
-  return String(campo)
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, letra => letra.toUpperCase())
-}
-
-// Convierte valores de cualquier tipo en texto para el PDF.
-function valorLegible(valor) {
-  if (valor === null || valor === undefined || valor === '') {
-    return 'No especificado'
+  function dinero (valor) {
+    return new Intl.NumberFormat('es-SV', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(Number(valor) || 0)
   }
 
-  if (typeof valor === 'boolean') {
-    return valor ? 'Sí' : 'No'
+  function actualizarPreferencia (campo, valor) {
+    finanzas?.actualizarConfiguracion({
+      [campo]: valor,
+    })
+
+    notificar('Preferencia guardada correctamente')
   }
 
-  if (Array.isArray(valor)) {
-    return valor.length
-      ? valor.map(item => valorLegible(item)).join(', ')
-      : 'Sin registros'
+  function notificar (texto, color = 'success') {
+    mensaje.value = texto
+    colorMensaje.value = color
+    snackbar.value = true
   }
 
-  if (typeof valor === 'object') {
-    return Object.entries(valor)
-      .map(([clave, dato]) =>
-        `${etiquetaCampo(clave)}: ${valorLegible(dato)}`
-      )
-      .join(' | ')
+  function restablecerPreferencias () {
+    finanzas?.restablecerConfiguracion()
+    dialogRestablecer.value = false
+    notificar('Configuración restablecida correctamente')
   }
 
-  return String(valor)
-}
+  // Convierte los nombres de campos en etiquetas legibles.
+  function etiquetaCampo (campo) {
+    return String(campo)
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, letra => letra.toUpperCase())
+  }
 
-// Agrega un título de sección al documento.
-function agregarTitulo(documento, titulo) {
-  const posicion = documento.lastAutoTable
-    ? documento.lastAutoTable.finalY + 14
-    : 55
+  // Convierte valores de cualquier tipo en texto para el PDF.
+  function valorLegible (valor) {
+    if ([null, undefined, ''].includes(valor)) {
+      return 'No especificado'
+    }
 
-  documento.setFontSize(13)
-  documento.setTextColor(37, 99, 235)
-  documento.setFont('helvetica', 'bold')
-  documento.text(titulo, 14, posicion)
+    if (typeof valor === 'boolean') {
+      return valor ? 'Sí' : 'No'
+    }
 
-  return posicion + 5
-}
+    if (Array.isArray(valor)) {
+      return valor.length > 0
+        ? valor.map(item => valorLegible(item)).join(', ')
+        : 'Sin registros'
+    }
 
-// Genera una tabla con los campos de un objeto.
-function agregarTablaObjeto(documento, objeto, inicio) {
-  const filas = objeto && typeof objeto === 'object'
-    ? Object.entries(objeto)
+    if (typeof valor === 'object') {
+      return Object.entries(valor)
+        .map(([clave, dato]) =>
+          `${etiquetaCampo(clave)}: ${valorLegible(dato)}`,
+        )
+        .join(' | ')
+    }
+
+    return String(valor)
+  }
+
+  // Agrega un título de sección al documento.
+  function agregarTitulo (documento, titulo) {
+    const posicion = documento.lastAutoTable
+      ? documento.lastAutoTable.finalY + 14
+      : 55
+
+    documento.setFontSize(13)
+    documento.setTextColor(37, 99, 235)
+    documento.setFont('helvetica', 'bold')
+    documento.text(titulo, 14, posicion)
+
+    return posicion + 5
+  }
+
+  // Genera una tabla con los campos de un objeto.
+  function agregarTablaObjeto (documento, objeto, inicio) {
+    const filas = objeto && typeof objeto === 'object'
+      ? Object.entries(objeto)
         .filter(([clave]) =>
-          !['id', 'password', 'token'].includes(clave.toLowerCase())
+          !['id', 'password', 'token'].includes(clave.toLowerCase()),
         )
         .map(([clave, valor]) => [
           etiquetaCampo(clave),
           valorLegible(valor),
         ])
-    : []
+      : []
 
-  autoTable(documento, {
-    startY: inicio,
-    head: [['Dato', 'Información']],
-    body: filas.length
-      ? filas
-      : [['Información', 'No hay datos disponibles']],
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-      overflow: 'linebreak',
-    },
-    columnStyles: {
-      0: { cellWidth: 55 },
-    },
-  })
-}
+    autoTable(documento, {
+      startY: inicio,
+      head: [['Dato', 'Información']],
+      body: filas.length > 0
+        ? filas
+        : [['Información', 'No hay datos disponibles']],
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        overflow: 'linebreak',
+      },
+      columnStyles: {
+        0: { cellWidth: 55 },
+      },
+    })
+  }
 
-// Genera una tabla para presupuestos o metas.
-function agregarTablaColeccion(documento, coleccion, inicio) {
-  const filas = []
+  // Genera una tabla para presupuestos o metas.
+  function agregarTablaColeccion (documento, coleccion, inicio) {
+    const filas = []
 
-  coleccion.forEach((registro, indice) => {
-    Object.entries(registro || {})
-      .filter(([clave]) => clave.toLowerCase() !== 'id')
-      .forEach(([clave, valor]) => {
+    for (const [indice, registro] of coleccion.entries()) {
+      for (const [clave, valor] of Object.entries(registro || {})
+      .filter(([clave]) => clave.toLowerCase() !== 'id')) {
         filas.push([
           String(indice + 1),
           etiquetaCampo(clave),
           valorLegible(valor),
         ])
-      })
-  })
-
-  autoTable(documento, {
-    startY: inicio,
-    head: [['N.º', 'Campo', 'Información']],
-    body: filas.length
-      ? filas
-      : [['—', 'Sin registros', 'No hay información disponible']],
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235] },
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-      overflow: 'linebreak',
-    },
-    columnStyles: {
-      0: { cellWidth: 12 },
-      1: { cellWidth: 45 },
-    },
-  })
-}
-
-function exportarDatos() {
-  try {
-    const documento = new jsPDF()
-    const fecha = new Date().toLocaleDateString('es-SV')
-
-    const movimientos = finanzas?.movimientos || []
-    const presupuestos = finanzas?.presupuestos || []
-    const metas = finanzas?.metas || []
-    const perfil = finanzas?.perfil || {}
-
-    // ENCABEZADO
-    documento.setFontSize(22)
-    documento.setTextColor(37, 99, 235)
-    documento.setFont('helvetica', 'bold')
-    documento.text('StudentWallet', 14, 20)
-
-    documento.setFontSize(15)
-    documento.setTextColor(30, 41, 59)
-    documento.text('Informe financiero personal', 14, 30)
-
-    documento.setFontSize(9)
-    documento.setTextColor(100, 116, 139)
-    documento.setFont('helvetica', 'normal')
-    documento.text(`Fecha de generación: ${fecha}`, 14, 38)
-    documento.text('Documento de información personal', 14, 44)
-
-    // PERFIL
-    let inicio = agregarTitulo(
-      documento,
-      '1. Información del perfil'
-    )
-
-    agregarTablaObjeto(documento, perfil, inicio)
-
-    // RESUMEN FINANCIERO
-    inicio = agregarTitulo(
-      documento,
-      '2. Resumen financiero'
-    )
+      }
+    }
 
     autoTable(documento, {
       startY: inicio,
-      head: [['Indicador', 'Valor']],
-      body: [
-        ['Saldo actual', dinero(finanzas?.saldo)],
-        ['Total de movimientos', String(movimientos.length)],
-        ['Total de presupuestos', String(presupuestos.length)],
-        ['Total de metas de ahorro', String(metas.length)],
-      ],
-      theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235] },
-      styles: { fontSize: 9, cellPadding: 3 },
-    })
-
-    // MOVIMIENTOS
-    inicio = agregarTitulo(
-      documento,
-      '3. Desglose de movimientos'
-    )
-
-    const filasMovimientos = movimientos.map(item => [
-      item.date || 'Sin fecha',
-      item.name || 'Sin descripción',
-      item.category || 'Sin categoría',
-      item.type === 'income' ? 'Ingreso' : 'Gasto',
-      dinero(item.amount),
-    ])
-
-    autoTable(documento, {
-      startY: inicio,
-      head: [[
-        'Fecha',
-        'Descripción',
-        'Categoría',
-        'Tipo',
-        'Monto',
-      ]],
-      body: filasMovimientos.length
-        ? filasMovimientos
-        : [['—', 'Sin movimientos', '—', '—', '—']],
+      head: [['N.º', 'Campo', 'Información']],
+      body: filas.length > 0
+        ? filas
+        : [['—', 'Sin registros', 'No hay información disponible']],
       theme: 'striped',
       headStyles: { fillColor: [37, 99, 235] },
       styles: {
         fontSize: 8,
-        cellPadding: 2.5,
+        cellPadding: 3,
         overflow: 'linebreak',
       },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 45 },
+      },
     })
-
-    // PRESUPUESTOS
-    inicio = agregarTitulo(
-      documento,
-      '4. Desglose de presupuestos'
-    )
-
-    agregarTablaColeccion(
-      documento,
-      presupuestos,
-      inicio
-    )
-
-    // METAS DE AHORRO
-    inicio = agregarTitulo(
-      documento,
-      '5. Metas de ahorro'
-    )
-
-    agregarTablaColeccion(
-      documento,
-      metas,
-      inicio
-    )
-
-    // PIE DE PÁGINA EN TODAS LAS HOJAS
-    const totalPaginas = documento.internal.getNumberOfPages()
-
-    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
-      documento.setPage(pagina)
-      documento.setFontSize(8)
-      documento.setTextColor(120, 120, 120)
-
-      documento.text(
-        `StudentWallet - Informe personal | Página ${pagina} de ${totalPaginas}`,
-        14,
-        documento.internal.pageSize.height - 10
-      )
-    }
-
-    documento.save(
-      `studentwallet-informe-${new Date().toISOString().slice(0, 10)}.pdf`
-    )
-
-    notificar('Informe PDF generado correctamente')
-  } catch (error) {
-    console.error('Error al exportar:', error)
-    notificar('No se pudo generar el informe PDF', 'error')
   }
-}
 
-const resumen = computed(() => ({
-  movimientos: (finanzas?.movimientos || []).length,
-  presupuestos: (finanzas?.presupuestos || []).length,
-  metas: (finanzas?.metas || []).length,
-}))
+  function exportarDatos () {
+    try {
+      const documento = new jsPDF()
+      const fecha = new Date().toLocaleDateString('es-SV')
+
+      const movimientos = finanzas?.movimientos || []
+      const presupuestos = finanzas?.presupuestos || []
+      const metas = finanzas?.metas || []
+      const perfil = finanzas?.perfil || {}
+
+      // ENCABEZADO
+      documento.setFontSize(22)
+      documento.setTextColor(37, 99, 235)
+      documento.setFont('helvetica', 'bold')
+      documento.text('StudentWallet', 14, 20)
+
+      documento.setFontSize(15)
+      documento.setTextColor(30, 41, 59)
+      documento.text('Informe financiero personal', 14, 30)
+
+      documento.setFontSize(9)
+      documento.setTextColor(100, 116, 139)
+      documento.setFont('helvetica', 'normal')
+      documento.text(`Fecha de generación: ${fecha}`, 14, 38)
+      documento.text('Documento de información personal', 14, 44)
+
+      // PERFIL
+      let inicio = agregarTitulo(
+        documento,
+        '1. Información del perfil',
+      )
+
+      agregarTablaObjeto(documento, perfil, inicio)
+
+      // RESUMEN FINANCIERO
+      inicio = agregarTitulo(
+        documento,
+        '2. Resumen financiero',
+      )
+
+      autoTable(documento, {
+        startY: inicio,
+        head: [['Indicador', 'Valor']],
+        body: [
+          ['Saldo actual', dinero(finanzas?.saldo)],
+          ['Total de movimientos', String(movimientos.length)],
+          ['Total de presupuestos', String(presupuestos.length)],
+          ['Total de metas de ahorro', String(metas.length)],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9, cellPadding: 3 },
+      })
+
+      // MOVIMIENTOS
+      inicio = agregarTitulo(
+        documento,
+        '3. Desglose de movimientos',
+      )
+
+      const filasMovimientos = movimientos.map(item => [
+        item.date || 'Sin fecha',
+        item.description || item.name || 'Sin descripción',
+        item.category?.name || item.category || 'Sin categoría',
+        item.type === 'ingreso' || item.type === 'income' ? 'Ingreso' : 'Gasto',
+        dinero(item.amount),
+      ])
+
+      autoTable(documento, {
+        startY: inicio,
+        head: [[
+          'Fecha',
+          'Descripción',
+          'Categoría',
+          'Tipo',
+          'Monto',
+        ]],
+        body: filasMovimientos.length > 0
+          ? filasMovimientos
+          : [['—', 'Sin movimientos', '—', '—', '—']],
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2.5,
+          overflow: 'linebreak',
+        },
+      })
+
+      // PRESUPUESTOS
+      inicio = agregarTitulo(
+        documento,
+        '4. Desglose de presupuestos',
+      )
+
+      agregarTablaColeccion(
+        documento,
+        presupuestos,
+        inicio,
+      )
+
+      // METAS DE AHORRO
+      inicio = agregarTitulo(
+        documento,
+        '5. Metas de ahorro',
+      )
+
+      agregarTablaColeccion(
+        documento,
+        metas,
+        inicio,
+      )
+
+      // PIE DE PÁGINA EN TODAS LAS HOJAS
+      const totalPaginas = documento.getNumberOfPages()
+
+      for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        documento.setPage(pagina)
+        documento.setFontSize(8)
+        documento.setTextColor(120, 120, 120)
+
+        documento.text(
+          `StudentWallet - Informe personal | Página ${pagina} de ${totalPaginas}`,
+          14,
+          documento.internal.pageSize.height - 10,
+        )
+      }
+
+      documento.save(
+        `studentwallet-informe-${new Date().toISOString().slice(0, 10)}.pdf`,
+      )
+
+      notificar('Informe PDF generado correctamente')
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      notificar('No se pudo generar el informe PDF', 'error')
+    }
+  }
+
+  const resumen = computed(() => ({
+    movimientos: (finanzas?.movimientos || []).length,
+    presupuestos: (finanzas?.presupuestos || []).length,
+    metas: (finanzas?.metas || []).length,
+  }))
+
+  onMounted(async () => {
+    await Promise.all([
+      finanzas?.cargarMovimientos?.(),
+      finanzas?.cargarPresupuestos?.(),
+      finanzas?.cargarMetas?.(),
+      finanzas?.cargarBalance?.(),
+      finanzas?.cargarPerfil?.(),
+    ])
+  })
 
 </script>
 
 <template>
-  <v-container fluid class="settings-page pa-4 pa-md-8">
+  <v-container class="settings-page pa-4 pa-md-8" fluid>
     <!-- ENCABEZADO -->
     <div class="page-header">
       <div>
         <v-btn
-          color="primary"
-          variant="text"
-          prepend-icon="mdi-arrow-left"
           class="mb-3"
+          color="primary"
+          prepend-icon="mdi-arrow-left"
+          variant="text"
           @click="router.push('/dashboard')"
         >
           Volver al Dashboard
@@ -324,7 +334,7 @@ const resumen = computed(() => ({
         <p>Personaliza tu experiencia en StudentWallet.</p>
       </div>
 
-      <v-chip color="primary" variant="tonal" size="large">
+      <v-chip color="primary" size="large" variant="tonal">
         <v-icon start>mdi-cog-outline</v-icon>
         Preferencias
       </v-chip>
@@ -379,6 +389,7 @@ const resumen = computed(() => ({
 
               <div>
                 <h3>Notificaciones</h3>
+
                 <p>
                   Preferencia general para avisos dentro de la aplicación.
                 </p>
@@ -386,10 +397,10 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias?.notificaciones"
               color="primary"
               hide-details
               inset
+              :model-value="preferencias?.notificaciones"
               @update:model-value="
                 actualizarPreferencia('notificaciones', $event)
               "
@@ -408,6 +419,7 @@ const resumen = computed(() => ({
 
               <div>
                 <h3>Alertas de presupuesto</h3>
+
                 <p>
                   Preferencia para avisos al acercarte a tus límites.
                 </p>
@@ -415,10 +427,10 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias?.alertasPresupuesto"
               color="primary"
               hide-details
               inset
+              :model-value="preferencias?.alertasPresupuesto"
               @update:model-value="
                 actualizarPreferencia('alertasPresupuesto', $event)
               "
@@ -437,6 +449,7 @@ const resumen = computed(() => ({
 
               <div>
                 <h3>Consejos financieros</h3>
+
                 <p>
                   Preferencia para mostrar recomendaciones de ahorro.
                 </p>
@@ -444,10 +457,10 @@ const resumen = computed(() => ({
             </div>
 
             <v-switch
-              :model-value="preferencias?.mostrarConsejos"
               color="primary"
               hide-details
               inset
+              :model-value="preferencias?.mostrarConsejos"
               @update:model-value="
                 actualizarPreferencia('mostrarConsejos', $event)
               "
@@ -478,10 +491,10 @@ const resumen = computed(() => ({
           </p>
 
           <v-alert
+            class="my-5"
+            density="comfortable"
             type="info"
             variant="tonal"
-            density="comfortable"
-            class="my-5"
           >
             Guarda el archivo en un lugar seguro. El respaldo
             puede contener información personal y financiera.
@@ -489,8 +502,8 @@ const resumen = computed(() => ({
 
           <v-btn
             color="primary"
-            rounded="lg"
             prepend-icon="mdi-download-outline"
+            rounded="lg"
             size="large"
             @click="exportarDatos"
           >
@@ -522,11 +535,11 @@ const resumen = computed(() => ({
           </p>
 
           <v-btn
-            color="warning"
-            variant="outlined"
-            rounded="lg"
-            prepend-icon="mdi-restore"
             class="mt-5"
+            color="warning"
+            prepend-icon="mdi-restore"
+            rounded="lg"
+            variant="outlined"
             @click="dialogRestablecer = true"
           >
             Restablecer configuración
@@ -548,47 +561,51 @@ const resumen = computed(() => ({
 
             <div class="overview-item">
               <span>
-                <v-icon size="19" color="primary">
+                <v-icon color="primary" size="19">
                   mdi-swap-horizontal
                 </v-icon>
                 Movimientos
               </span>
+
               <strong>{{ resumen.movimientos }}</strong>
             </div>
 
             <div class="overview-item">
               <span>
-                <v-icon size="19" color="primary">
+                <v-icon color="primary" size="19">
                   mdi-chart-donut
                 </v-icon>
                 Presupuestos
               </span>
+
               <strong>{{ resumen.presupuestos }}</strong>
             </div>
 
             <div class="overview-item">
               <span>
-                <v-icon size="19" color="primary">
+                <v-icon color="primary" size="19">
                   mdi-piggy-bank-outline
                 </v-icon>
                 Metas de ahorro
               </span>
+
               <strong>{{ resumen.metas }}</strong>
             </div>
 
             <v-divider class="my-5" />
 
             <div class="balance-label">Saldo actual</div>
+
             <h2 class="balance-value">
               {{ dinero(finanzas?.saldo) }}
             </h2>
 
             <v-btn
               block
-              color="primary"
-              variant="tonal"
-              rounded="lg"
               class="mt-5"
+              color="primary"
+              rounded="lg"
+              variant="tonal"
               @click="router.push('/perfil')"
             >
               <v-icon start>mdi-account-circle-outline</v-icon>
@@ -597,26 +614,14 @@ const resumen = computed(() => ({
           </div>
         </v-card>
 
-        <v-alert
-          type="info"
-          variant="tonal"
-          class="mt-5"
-          rounded="lg"
-        >
-          <strong>Almacenamiento local</strong>
-          <p class="mt-2">
-            Tus datos se guardan en este navegador.
-            Si borras sus datos o cambias de dispositivo,
-            podrías perder la información.
-          </p>
-        </v-alert>
+
       </v-col>
     </v-row>
 
     <!-- CONFIRMACIÓN -->
     <v-dialog v-model="dialogRestablecer" max-width="420">
       <v-card class="confirm-dialog" rounded="xl">
-        <v-icon size="50" color="warning">
+        <v-icon color="warning" size="50">
           mdi-alert-circle-outline
         </v-icon>
 
@@ -629,8 +634,8 @@ const resumen = computed(() => ({
 
         <div class="dialog-actions">
           <v-btn
-            variant="outlined"
             rounded="lg"
+            variant="outlined"
             @click="dialogRestablecer = false"
           >
             Cancelar
