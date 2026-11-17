@@ -27,7 +27,11 @@
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
-  const transacciones = ref([])
+  const reporte = ref({
+    totals: { total_incomes: 0, total_expenses: 0, balance: 0 },
+    monthly: [],
+    categories: [],
+  })
   const usuarios = ref([])
   const cargando = ref(false)
 
@@ -41,77 +45,45 @@
     '#EC4899', '#06B6D4', '#64748B',
   ]
 
-  function esIngreso (transaccion) {
-    const tipo = String(transaccion?.type || '').toLowerCase()
-    return tipo === 'ingreso' || tipo === 'income'
-  }
-
   function extraerLista (datos) {
     if (Array.isArray(datos?.data)) return datos.data
     if (Array.isArray(datos)) return datos
     return []
   }
 
-  const resumenMensual = computed(() => {
-    const meses = nombresMeses.map(mes => ({ mes, ingresos: 0, gastos: 0 }))
+  function formatearMes (ym) {
+    const partes = String(ym || '').split('-')
+    if (partes.length < 2) return ym || ''
+    const idx = Number(partes[1]) - 1
+    const nombre = nombresMeses[idx] || partes[1]
+    return `${nombre} ${partes[0]}`
+  }
 
-    for (const transaccion of transacciones.value) {
-      const fecha = new Date(transaccion.date)
-      if (Number.isNaN(fecha.getTime())) continue
-
-      const monto = Number(transaccion.amount) || 0
-      const registro = meses[fecha.getMonth()]
-
-      if (esIngreso(transaccion)) {
-        registro.ingresos += monto
-      } else {
-        registro.gastos += monto
-      }
-    }
-
-    return meses.filter(mes => mes.ingresos > 0 || mes.gastos > 0)
-  })
-
-  const categorias = computed(() => {
-    const totales = {}
-
-    for (const transaccion of transacciones.value) {
-      if (esIngreso(transaccion)) continue
-
-      const nombre = transaccion.category?.name || transaccion.category?.nombre || 'Otros'
-      const monto = Number(transaccion.amount) || 0
-
-      totales[nombre] = (totales[nombre] || 0) + monto
-    }
-
-    return Object.entries(totales).map(([nombre, monto], indice) => ({
-      nombre,
-      monto,
-      color: coloresCategorias[indice % coloresCategorias.length],
-    }))
-  })
-
-  const totalIngresos = computed(() =>
-    transacciones.value
-      .filter(t => esIngreso(t))
-      .reduce(
-        (total, transaccion) => total + (Number(transaccion.amount) || 0),
-        0,
-      ),
+  const resumenMensual = computed(() =>
+    (reporte.value.monthly || [])
+      .slice()
+      .sort((a, b) => String(a.month).localeCompare(String(b.month)))
+      .map(item => ({
+        mes: formatearMes(item.month),
+        ingresos: Number(item.ingresos) || 0,
+        gastos: Number(item.gastos) || 0,
+      }))
+      .filter(mes => mes.ingresos > 0 || mes.gastos > 0),
   )
 
-  const totalGastos = computed(() =>
-    transacciones.value
-      .filter(transaccion => !esIngreso(transaccion))
-      .reduce(
-        (total, transaccion) => total + (Number(transaccion.amount) || 0),
-        0,
-      ),
+  const categorias = computed(() =>
+    (reporte.value.categories || []).map((cat, indice) => ({
+      nombre: cat.name || 'Sin categoría',
+      monto: Number(cat.amount) || 0,
+      color: cat.color || coloresCategorias[indice % coloresCategorias.length],
+    })),
   )
 
-  const balance = computed(() =>
-    totalIngresos.value - totalGastos.value,
-  )
+  const totalIngresos = computed(() => Number(reporte.value.totals?.total_incomes) || 0)
+
+  const totalGastos = computed(() => Number(reporte.value.totals?.total_expenses) || 0)
+
+  const balance = computed(() => Number(reporte.value.totals?.balance) || (totalIngresos.value - totalGastos.value))
 
   const porcentajeAhorro = computed(() =>
     totalIngresos.value > 0
@@ -240,19 +212,23 @@
         Authorization: `Bearer ${token}`,
       }
 
-      const [respuestaTransacciones, respuestaUsuarios] = await Promise.all([
-        fetch(`${API_BASE}/transactions`, { headers }),
+      const [respuestaReporte, respuestaUsuarios] = await Promise.all([
+        fetch(`${API_BASE}/admin/reports`, { headers }),
         fetch(`${API_BASE}/admin/users`, { headers }),
       ])
 
-      if (respuestaTransacciones.ok) {
-        const datos = await respuestaTransacciones.json()
-        const lista = extraerLista(datos)
-
-        transacciones.value = lista.map(transaccion => ({
-          ...transaccion,
-          amount: Number(transaccion.amount) || 0,
-        }))
+      if (respuestaReporte.ok) {
+        const datos = await respuestaReporte.json()
+        const payload = datos?.data || datos || {}
+        reporte.value = {
+          totals: {
+            total_incomes: Number(payload.totals?.total_incomes) || 0,
+            total_expenses: Number(payload.totals?.total_expenses) || 0,
+            balance: Number(payload.totals?.balance) || 0,
+          },
+          monthly: Array.isArray(payload.monthly) ? payload.monthly : [],
+          categories: Array.isArray(payload.categories) ? payload.categories : [],
+        }
       }
 
       if (respuestaUsuarios.ok) {
@@ -300,9 +276,6 @@
         </p>
       </div>
 
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <!-- INDICADORES -->
@@ -420,7 +393,7 @@
       <div class="section-heading">
         <div>
           <h2>Resumen financiero mensual</h2>
-          <p>Indicadores en integración con API</p>
+          <p>Consolidado agregado de ingresos y gastos de la plataforma</p>
         </div>
 
         <v-icon color="primary">
@@ -465,16 +438,6 @@
       </v-table>
     </v-card>
 
-    <v-alert
-      class="mt-5"
-      rounded="lg"
-      type="info"
-      variant="tonal"
-    >
-      Este panel utiliza información ficticia para demostrar
-      cómo funcionaría la supervisión financiera.
-      No muestra datos privados de estudiantes.
-    </v-alert>
   </div>
 </template>
 

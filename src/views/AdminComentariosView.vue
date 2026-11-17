@@ -146,10 +146,6 @@
           y administra las mejoras de StudentWallet.
         </p>
       </div>
-
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <!-- ESTADÍSTICAS -->

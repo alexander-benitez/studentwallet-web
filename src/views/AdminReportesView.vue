@@ -624,10 +624,6 @@
           descargables de StudentWallet.
         </p>
       </div>
-
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <v-card class="report-card mt-6" elevation="0">
@@ -758,12 +754,6 @@
         </tbody>
       </v-table>
     </v-card>
-
-    <v-alert class="mt-5" type="info" variant="tonal">
-      Los reportes están en integración con la API para fines
-      académicos. No incluyen información financiera
-      privada de estudiantes.
-    </v-alert>
 
     <v-snackbar
       v-model="snackbar"

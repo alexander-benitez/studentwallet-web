@@ -124,10 +124,6 @@
           Consulta y administra las cuentas de StudentWallet.
         </p>
       </div>
-
-      <v-chip color="success" variant="tonal">
-        Conectado a la API real
-      </v-chip>
     </div>
 
     <!-- ESTADÍSTICAS -->

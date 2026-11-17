@@ -82,10 +82,6 @@
           Supervisa la actividad general de StudentWallet.
         </p>
       </div>
-
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <v-row class="mt-4">
@@ -184,10 +180,6 @@
             <v-icon color="success">mdi-check-circle</v-icon>
             Gestión real de usuarios
           </div>
-
-          <v-alert class="mt-5" density="comfortable" type="info" variant="tonal">
-            Los datos mostrados son reales y provienen de la base de datos.
-          </v-alert>
         </v-card>
       </v-col>
     </v-row>

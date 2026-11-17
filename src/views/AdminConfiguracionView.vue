@@ -103,9 +103,6 @@
         </p>
       </div>
 
-      <v-chip color="info" variant="tonal">
-        Módulo en integración con API (Sprint 4)
-      </v-chip>
     </div>
 
     <v-form ref="formulario" @submit.prevent="guardarConfiguracion">
@@ -173,7 +170,6 @@
 
               <div>
                 <h2>Funciones de la plataforma</h2>
-                <p>Preferencias administrativas en integración</p>
               </div>
             </div>
 
@@ -319,16 +315,6 @@
             </v-btn>
           </v-card>
 
-          <v-alert
-            class="mt-5"
-            rounded="lg"
-            type="info"
-            variant="tonal"
-          >
-            Las preferencias se almacenan en este navegador.
-            Todavía no controlan el funcionamiento real de
-            los módulos ni se sincronizan entre usuarios.
-          </v-alert>
         </v-col>
       </v-row>
 
